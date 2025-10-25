@@ -54,6 +54,12 @@ export default async function handler(request, response) {
             console.error("[Proxy] Fetch 失败原因 (Error Cause):", error.cause);
         }
 
+        // --- 返回更明确的超时错误信息 ---
+        let errorMessage = `代理服务器内部错误: ${error.message}`;
+        if (error.message && error.message.includes('fetch failed')) {
+            errorMessage = "代理请求后端(Hugging Face)超时或失败。这很可能是因为 HF 免费 Space 正在冷启动（休眠唤醒），请在 1 分钟后重试。";
+        }
+
         response.status(500).json({ detail: `代理服务器内部错误: ${error.message}` });
     }
 }
