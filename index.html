@@ -369,7 +369,7 @@
             </div>
             <div class="control-group">
                 <label for="stock-code-input">Stock Code</label>
-                <input type="text" id="stock-code-input" placeholder="e.g. 600519">
+                <input type="text" id="stock-code-input" placeholder="e.g. 600000">
             </div>
 
 
@@ -444,7 +444,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const API_URL = "/api/proxy";
+            // "/api/proxy";
+            const API_URL = "http://127.0.0.1:7860/inference";
 
             // 声明一个全局变量来存储后端返回的完整数据
             let chartDataStore = null;
@@ -453,6 +454,41 @@
 
             const runButton = document.getElementById('run-inference');
             const loader = document.getElementById('loader');
+
+            // --- 获取股票代码输入框 ---
+            const stockCodeInput = document.getElementById('stock-code-input');
+
+            // --- 页面加载时，按钮默认为不可用 ---
+            runButton.disabled = true;
+
+            // --- 监听股票代码输入框 ---
+            if (stockCodeInput && runButton) {
+                stockCodeInput.addEventListener('input', () => {
+                    // 只有当输入框内容去除前后空格后不为空时，按钮才可用
+                    runButton.disabled = stockCodeInput.value.trim() === "";
+                });
+            }
+
+            // 确保 "Model Inference" 区域始终显示标签，以保持顶部控制栏高度
+            function setEmptyModelResults() {
+                const modelResultsContent = document.getElementById('model-results-content');
+                if (modelResultsContent) {
+                    modelResultsContent.innerHTML = `
+                        <div class="result-item">
+                            <span class="result-item-label">Returns:</span>
+                            <span class="result-item-value"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-item-label">Sharp:</span>
+                            <span class="result-item-value"></span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-item-label">Max drawdown:</span>
+                            <span class="result-item-value"></span>
+                        </div>
+                    `;
+                }
+            }
 
             // 定义一个函数，用于在不重新请求后端数据的情况下重绘图表
             function rerenderCharts() {
@@ -477,7 +513,8 @@
                 document.getElementById('model-account-history-content').innerHTML = '';
 
                 // --- 清空结果区域 ---
-                document.getElementById('model-results-content').innerHTML = '';
+                setEmptyModelResults();
+                // document.getElementById('model-results-content').innerHTML = '';
 
 
                 // --- 获取所有输入控件的值 ---
@@ -491,7 +528,7 @@
                 if (!stockCode || stockCode.trim() === "") {
                     alert("请输入股票代码 (Stock Code)");
                     loader.style.display = 'none';
-                    runButton.disabled = false;
+                    runButton.disabled = true;
                     return;
                 }
 
@@ -553,7 +590,12 @@
                                 </div>
                             `;
                         } else {
-                            element.innerHTML = '<div class="result-item"><span class="result-item-label">No data available</span></div>';
+                            // 确保此逻辑只针对 model-results-content
+                            if (element.id === 'model-results-content') {
+                                setEmptyModelResults();
+                            } else {
+                                element.innerHTML = '<div class="result-item"><span class="result-item-label">No data</span></div>';
+                            }
                         }
                     }
 
@@ -576,7 +618,12 @@
                     alert(`加载数据失败: ${error.message}`);
                 } finally {
                     loader.style.display = 'none';
-                    runButton.disabled = false;
+                    // 请求结束后，按钮的可用状态应重新根据输入框内容判断
+                    if (stockCodeInput) {
+                        runButton.disabled = stockCodeInput.value.trim() === "";
+                    } else {
+                        runButton.disabled = false; // 备用方案
+                    }
                 }
             }
 
@@ -668,6 +715,17 @@
                             // const optimalAction = chartDataStore.optimal_actions[dataIndex];
                             const modelAction = chartDataStore.model_actions[dataIndex];
 
+                            // 我们需要从图表系列中获取资产数据，以确保即使数据点在视图之外也能正确显示
+                            let assetValue = null;
+                            // 查找名为 'Assets' 的系列的数据
+                            const assetSeries = params.find(p => p.seriesName === 'Assets');
+                            if (assetSeries && assetSeries.value !== undefined) {
+                                assetValue = assetSeries.value;
+                            } else if (assetCurveData && assetCurveData[dataIndex] !== undefined) {
+                                // 备用方案：直接从传入的数组中获取（如果系列不可见或未在params中）
+                                assetValue = assetCurveData[dataIndex];
+                            }
+
                             const formatVolume = (volume) => {
                                 if (volume >= 1000000) return (volume / 1000000).toFixed(2) + 'M';
                                 if (volume >= 1000) return (volume / 1000).toFixed(2) + 'K';
@@ -696,6 +754,15 @@
                             // tooltipHtml += `Volume: ${formatVolume(klineInfo.volume)}<hr style="margin: 5px 0; border-color: #555;">`;
                             // tooltipHtml += `<b>Optimal Strategy:</b> ${formatAction(optimalAction)}<br/>`;
                             tooltipHtml += `<b>Model  Inference:</b> ${formatAction(modelAction)}`;
+
+                            // 检查 assetValue 是否有效
+                            if (assetValue !== null && assetValue !== undefined) {
+                                // 确保 assetValue 是一个数字，如果它是从 series.value 获取的
+                                const numericAssetValue = typeof assetValue === 'number' ? assetValue : parseFloat(assetValue);
+                                if (!isNaN(numericAssetValue)) {
+                                    tooltipHtml += `<br/><b>Simulate Asset:</b> ${numericAssetValue.toFixed(2)}`;
+                                }
+                            }
 
                             return tooltipHtml;
                         }
@@ -915,6 +982,8 @@
 
             // 避免首次加载时显示空图表
             initializeEmptyCharts();
+
+            setEmptyModelResults();
 
             window.addEventListener('resize', () => {
                 modelChart.resize();
