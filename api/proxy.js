@@ -28,10 +28,11 @@ export default async function handler(request, response) {
 
     // 2. 从 Vercel 环境变量中获取机密信息
     const HF_API_URL = process.env.HF_API_URL;
-    const HF_API_TOKEN = process.env.HF_API_TOKEN;
+    //const HF_API_TOKEN = process.env.HF_API_TOKEN;
+    const hfToken = process.env.HF_ACCESS_TOKEN;
 
-    if (!HF_API_URL || !HF_API_TOKEN) {
-        console.error("Vercel 环境变量 HF_API_URL 或 HF_API_TOKEN 未设置");
+    if (!HF_API_URL || !hfToken) {
+        console.error("Vercel 环境变量 HF_API_URL 或 HF_ACCESS_TOKEN 未设置");
         response.status(500).json({ detail: "服务器代理配置错误" });
         return;
     }
@@ -45,7 +46,7 @@ export default async function handler(request, response) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${HF_API_TOKEN}`
+                'Authorization': `Bearer ${hfToken}`
             },
             body: JSON.stringify(request.body),
             // --- 移除 ---
