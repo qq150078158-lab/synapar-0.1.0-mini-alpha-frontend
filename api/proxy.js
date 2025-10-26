@@ -1,3 +1,15 @@
+// --- 移除 ---
+// import https from 'https';
+//
+// // 创建一个 agent 来忽略 TLS 证书验证
+// // 这是针对 ERR_TLS_CERT_ALTNAME_INVALID 问题的特定解决方案
+// // 警告：这会禁用对目标服务器的 SSL 证书验证，会带来安全风险。
+// // 仅在您完全信任目标 API (HF_API_URL) 且无法解决证书问题时使用。
+// const unsafeAgent = new https.Agent({
+//   rejectUnauthorized: false
+// });
+// --- 结束移除 ---
+
 export default async function handler(request, response) {
     // --- 新增 ---
     // 解决 Vercel fetch 时的 ERR_TLS_CERT_ALTNAME_INVALID
@@ -36,22 +48,49 @@ export default async function handler(request, response) {
                 'Authorization': `Bearer ${HF_API_TOKEN}`
             },
             body: JSON.stringify(request.body),
+            // --- 移除 ---
+            // dispatcher: unsafeAgent
+            // --- 结束移除 ---
         });
 
-        // 4. 处理来自 Hugging Face 的响应
-        if (!hfResponse.ok) {
-            // --- 增强日志：如果 HF API 返回错误，记录状态码 ---
-            const errorData = await hfResponse.json();
-            console.error(`[Proxy] Hugging Face API 错误: 状态码 ${hfResponse.status}`, errorData);
+        // --- 修改：增强响应处理 ---
+        // 检查响应头
+        const contentType = hfResponse.headers.get("content-type");
 
-            // 将 HF 的错误状态码和详情转发给前端
-            response.status(hfResponse.status).json(errorData);
-        } else {
-            // 如果成功，将数据转发给前端
+        if (hfResponse.ok && contentType && contentType.includes("application/json")) {
+            // 4a. 成功: 2xx 状态码 且 Content-Type 是 JSON
             console.log("[Proxy] 成功从 HF API 获取数据并返回给前端");
             const data = await hfResponse.json();
             response.status(200).json(data);
+        } else {
+            // 4b. 失败: 非 2xx 状态码, 或者 Content-Type 不是 JSON
+
+            // 将响应体读取为文本，避免 JSON 解析错误
+            const errorText = await hfResponse.text();
+
+            if (!hfResponse.ok) {
+                // 非 2xx 错误 (e.g., 401, 403, 500)
+                console.error(`[Proxy] Hugging Face API 错误: 状态码 ${hfResponse.status}`);
+                // 打印HTML响应的开头，帮助诊断
+                console.error(`[Proxy] HF 响应 (非JSON): ${errorText.substring(0, 200)}...`);
+
+                // 将 HF 的错误状态码和文本详情转发给前端
+                response.status(hfResponse.status).json({
+                    detail: `Hugging Face API Error (Status ${hfResponse.status})`,
+                    hf_response_body: errorText // 将 HTML 错误发给前端
+                });
+            } else {
+                // 2xx 成功状态码, 但是响应不是 JSON (这就是当前日志显示的情况)
+                console.error(`[Proxy] HF 响应格式错误: 预期 application/json，但收到 ${contentType}`);
+                console.error(`[Proxy] HF 响应 (HTML/Text): ${errorText.substring(0, 200)}...`);
+
+                response.status(500).json({
+                    detail: "代理错误：后端(HF)返回了非JSON格式的成功响应",
+                    hf_response_body: errorText // 将 HTML 响应发给前端
+                });
+            }
         }
+        // --- 结束修改 ---
 
     } catch (error) {
         // --- 增强日志：打印完整的错误对象 ---
