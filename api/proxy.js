@@ -39,8 +39,11 @@ export default async function handler(request, response) {
 
     // --- 新增日志：打印目标 URL (但不打印 Token) ---
     console.log(`[Proxy] 正在转发 POST 请求至: ${HF_API_URL}`);
+    console.log(`[Proxy] HF_ACCESS_TOKEN: ${hfToken}`);
 
     try {
+        console.log(`[Proxy] 请求体: ${request.body}`);
+
         // 3. 将前端的请求转发到 Hugging Face
         const hfResponse = await fetch(HF_API_URL, {
             method: 'POST',
