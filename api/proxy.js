@@ -1,3 +1,14 @@
+import https from 'https';
+
+// 创建一个 agent 来忽略 TLS 证书验证
+// 这是针对 ERR_TLS_CERT_ALTNAME_INVALID 问题的特定解决方案
+// 警告：这会禁用对目标服务器的 SSL 证书验证，会带来安全风险。
+// 仅在您完全信任目标 API (HF_API_URL) 且无法解决证书问题时使用。
+const unsafeAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+
 export default async function handler(request, response) {
     // 1. 仅允许 POST 请求
     if (request.method !== 'POST') {
@@ -15,7 +26,7 @@ export default async function handler(request, response) {
         return;
     }
 
-    // --- 新增日志：打印目标 URL (但不打印 Token) ---
+    // --- 打印目标 URL (但不打印 Token) ---
     console.log(`[Proxy] 正在转发 POST 请求至: ${HF_API_URL}`);
 
     try {
@@ -26,12 +37,15 @@ export default async function handler(request, response) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${HF_API_TOKEN}`
             },
-            body: JSON.stringify(request.body)
+            body: JSON.stringify(request.body),
+            // 使用不安全的 agent 来绕过 Vercel node fetch 中的 TLS 证书验证
+            // 这是为了解决 ERR_TLS_CERT_ALTNAME_INVALID
+            dispatcher: unsafeAgent
         });
 
         // 4. 处理来自 Hugging Face 的响应
         if (!hfResponse.ok) {
-            // --- 增强日志：如果 HF API 返回错误，记录状态码 ---
+            // --- 如果 HF API 返回错误，记录状态码 ---
             const errorData = await hfResponse.json();
             console.error(`[Proxy] Hugging Face API 错误: 状态码 ${hfResponse.status}`, errorData);
 
@@ -45,7 +59,7 @@ export default async function handler(request, response) {
         }
 
     } catch (error) {
-        // --- 增强日志：打印完整的错误对象 ---
+        // --- 打印完整的错误对象 ---
         // 这对于诊断 "fetch failed" 至关重要
         console.error("[Proxy] Vercel 代理 fetch 失败:", error);
 
@@ -57,9 +71,11 @@ export default async function handler(request, response) {
         // --- 返回更明确的超时错误信息 ---
         let errorMessage = `代理服务器内部错误: ${error.message}`;
         if (error.message && error.message.includes('fetch failed')) {
-            errorMessage = "代理请求后端(Hugging Face)超时或失败。这很可能是因为 HF 免费 Space 正在冷启动（休眠唤醒），请在 1 分钟后重试。";
+            // 捕获到原始的 fetch failed，提供更友好的提示
+            errorMessage = "代理请求后端(Hugging Face)超时或失败。这很可能是因为 HF 免费 Space 正在冷启动（休眠唤醒），或者发生了TLS错误。请在 1 分钟后重试。";
         }
 
+        // --- 注意：将原始错误信息返回给前端，以便调试 ---
         response.status(500).json({ detail: `代理服务器内部错误: ${error.message}` });
     }
 }
