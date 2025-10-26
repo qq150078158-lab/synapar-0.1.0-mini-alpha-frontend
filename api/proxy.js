@@ -1,24 +1,5 @@
-// --- 移除 ---
-// import https from 'https';
-//
-// // 创建一个 agent 来忽略 TLS 证书验证
-// // 这是针对 ERR_TLS_CERT_ALTNAME_INVALID 问题的特定解决方案
-// // 警告：这会禁用对目标服务器的 SSL 证书验证，会带来安全风险。
-// // 仅在您完全信任目标 API (HF_API_URL) 且无法解决证书问题时使用。
-// const unsafeAgent = new https.Agent({
-//   rejectUnauthorized: false
-// });
-// --- 结束移除 ---
-
 export default async function handler(request, response) {
-    // --- 新增 ---
-    // 解决 Vercel fetch 时的 ERR_TLS_CERT_ALTNAME_INVALID
-    // Vercel serverless 环境的 Node.js fetch (undici) 会验证证书
-    // 将此环境变量设为 "0" 可在全局禁用此 serverless function 实例的 TLS 验证
-    // 警告：这会禁用 SSL 证书验证，会带来安全风险。
-    // 仅在您完全信任目标 API (HF_API_URL) 且无法解决证书问题时使用。
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    // --- 结束新增 ---
 
     // 1. 仅允许 POST 请求
     if (request.method !== 'POST') {
@@ -26,9 +7,8 @@ export default async function handler(request, response) {
         return;
     }
 
-    // 2. 从 Vercel 环境变量中获取机密信息
+    // 2. 环境变量
     const HF_API_URL = process.env.HF_API_URL;
-    //const HF_API_TOKEN = process.env.HF_API_TOKEN;
     const hfToken = process.env.HF_ACCESS_TOKEN;
 
     if (!HF_API_URL || !hfToken) {
@@ -37,9 +17,8 @@ export default async function handler(request, response) {
         return;
     }
 
-    // --- 新增日志：打印目标 URL (但不打印 Token) ---
+    // --- 打印目标 URL ---
     console.log(`[Proxy] 正在转发 POST 请求至: ${HF_API_URL}`);
-    console.log(`[Proxy] HF_ACCESS_TOKEN: ${hfToken}`);
 
     try {
         console.log(`[Proxy] 请求体: ${request.body}`);
@@ -52,12 +31,8 @@ export default async function handler(request, response) {
                 'Authorization': `Bearer ${hfToken}`
             },
             body: JSON.stringify(request.body),
-            // --- 移除 ---
-            // dispatcher: unsafeAgent
-            // --- 结束移除 ---
         });
 
-        // --- 修改：增强响应处理 ---
         // 检查响应头
         const contentType = hfResponse.headers.get("content-type");
 
@@ -94,11 +69,9 @@ export default async function handler(request, response) {
                 });
             }
         }
-        // --- 结束修改 ---
 
     } catch (error) {
-        // --- 增强日志：打印完整的错误对象 ---
-        // 这对于诊断 "fetch failed" 至关重要
+        // --- 打印完整的错误对象 ---
         console.error("[Proxy] Vercel 代理 fetch 失败:", error);
 
         // error.cause 经常包含超时的详细信息
@@ -113,7 +86,7 @@ export default async function handler(request, response) {
             errorMessage = "代理请求后端(Hugging Face)超时或失败。这很可能是因为 HF 免费 Space 正在冷启动（休眠唤醒），或者发生了TLS错误。请在 1 分钟后重试。";
         }
 
-        // --- 注意：将原始错误信息返回给前端，以便调试 ---
+        // --- 将原始错误信息返回给前端，以便调试 ---
         response.status(500).json({ detail: errorMessage });
     }
 }
