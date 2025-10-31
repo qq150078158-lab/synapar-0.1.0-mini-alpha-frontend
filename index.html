@@ -400,25 +400,25 @@
             transform: translateX(0) translateY(10px);
         }
 
-        /* 响应式：针对移动设备优化 tooltip 宽度和位置 */
+        /* 移动设备优化 tooltip 宽度和位置 */
         @media (max-width: 768px) {
             .info-tooltip {
                 position: fixed;
-                /* top: 50%; */
-                left: 50%;
-                transform: translate(-50%, -50%);
+                top: 135px;
+                bottom: auto;
+                left: 5vw;
                 width: 90vw;
                 max-width: 90vw;
-                max-height: 80vh;
+                transform: none;
+                max-height: 70vh;
                 overflow-y: auto;
-                translateY: 0;
             }
 
             .info-item:first-child .info-tooltip,
             .info-item:last-child .info-tooltip {
-                left: 50%;
+                left: 5vw;
                 right: auto;
-                transform: translate(-50%, -50%); 
+                transform: none;
             }
         }
 
