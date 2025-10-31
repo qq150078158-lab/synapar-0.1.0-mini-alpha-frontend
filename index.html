@@ -404,21 +404,20 @@
         @media (max-width: 768px) {
             .info-tooltip {
                 position: fixed;
-                top: 135px;
-                bottom: auto;
-                left: 5vw;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
                 width: 90vw;
                 max-width: 90vw;
-                transform: none;
-                max-height: 70vh;
-                overflow-y: auto;
+                max-height: 80vh;
+                overflow-y: auto; 
+                translateY: 0;
             }
-
             .info-item:first-child .info-tooltip,
             .info-item:last-child .info-tooltip {
-                left: 5vw;
+                left: 50%;
                 right: auto;
-                transform: none;
+                transform: translate(-50%, -50%);
             }
         }
 
