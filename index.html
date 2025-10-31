@@ -338,6 +338,75 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* --- 信息提示栏样式 --- */
+        .info-bar {
+            display: flex;
+            justify-content: center;
+            gap: 25px; /* 各项之间的间距 */
+            margin-top: 5px; /* 在 h3 下方增加一点间距 */
+            margin-bottom: 10px; /* 和下方 controls 区域的间距 */
+            width: 95%;
+            max-width: 1600px;
+            padding: 5px 0; /* 增加一点垂直内边距 */
+        }
+
+        .info-item {
+            position: relative;
+            font-size: 13px;
+            color: #4CAF50; /* 使用主题绿色，使其醒目 */
+            cursor: pointer;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .info-item:hover {
+            color: #5cb85c; /* 悬浮时颜色变亮 */
+        }
+
+        .info-tooltip {
+            display: none; /* 默认隐藏 */
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            width: 600px; /* 设定一个较大的固定宽度 */
+            max-width: 90vw; /* 防止在小屏幕上溢出 */
+            background-color: #3a3a3a; /* 使用较深的背景 */
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            text-align: left; /* 确保内容左对齐 */
+            font-size: 12px;
+            line-height: 1.7;
+            /* 保留换行和空格，同时允许自动换行 */
+            white-space: pre-wrap;
+            font-family: inherit; /* 继承 info-item 的字体 */
+            font-weight: normal; /* 重置字体粗细 */
+            cursor: default; /* 浮窗内容为默认光标 */
+        }
+
+        /* 当 info-item 悬浮时，显示其子元素 .info-tooltip */
+        .info-item:hover .info-tooltip {
+            display: block;
+        }
+
+        /* 调整浮窗位置，避免被遮挡或溢出 */
+        /* 第一个子元素(左侧)的 Tooltip */
+        .info-item:first-child .info-tooltip {
+            left: 0;
+            transform: translateX(0) translateY(10px);
+        }
+
+        /* 最后一个子元素(右侧)的 Tooltip */
+        .info-item:last-child .info-tooltip {
+            left: auto;
+            right: 0;
+            transform: translateX(0) translateY(10px);
+        }
+
         /* --- 页脚提示信息样式 --- */
         .footer-disclaimer {
             width: 95%;
@@ -368,6 +437,49 @@
 
     <h1>Synapar</h1>
     <h3>Version: 0.1.0-mini-alpha | Model parameters: 1.59M</h3>
+
+    <!-- --- 信息提示栏 --- -->
+    <div class="info-bar">
+        <div class="info-item">
+            Special Notes
+            <div class="info-tooltip">
+1. As the project is currently in the preliminary validation stage of its technical approach and model efficacy, the present version is a minimal-size test build.
+2. The current model was trained exclusively on a subset of historical A-stocks and BTC data. Consequently, its performance in non-A-stocks markets is expected to be comparatively weaker, although it still retains a degree of generalization capability.
+3. Due to the extreme scarcity of high-frequency (i.e., sub-daily) data within the training set, the current version exhibits poor performance on high-frequency data.
+4. For identical inputs, the model's generated outputs are precisely reproducible.
+5. A longer maximum context length generally correlates with higher end-point returns.
+6. The model's output comprises three key elements: direction, quantity, and leverage.
+6.1 Direction: Includes three distinct instructions — Long, Short, and Hold — along with their respective confidence scores.
+6.2 Quantity: A floating-point value within the [-1, 1] range. A positive value signifies the proportion of available capital to be used for opening or increasing a position. A negative value signifies the proportion of current holdings to be liquidated or reduced.
+6.3 Leverage: A floating-point value within the [0, 1] range, indicating the proportion of the permissible leverage (e.g., within a 1x to 20x range) to apply to the trade. This value is not applicable when closing or reducing a position.
+7. Synapar is a Large Trading Model (LTM). It aims to establish a general-purpose infrastructure for generating a theoretically near-optimal trading instruction for the latest time step, based on a context of a given length — specifically, financial time-series data of a particular frequency. Admittedly, trading rules differ among various financial markets and products, and investors operate under diverse self-imposed constraints. Therefore, the application of LTM-generated trading instructions necessitates flexible adaptation in accordance with the specific context.
+8. Future iterations of the model are planned to cover major global financial markets and products, including equities, futures, forex, and cryptocurrencies. The vision is for Synapar to become a general-purpose infrastructure for AI-generated trading instructions, accessible via API services.
+            </div>
+        </div>
+
+        <div class="info-item">
+            Trading Rules
+            <div class="info-tooltip">
+For ease of understanding and comparison, simulated trading follows these simplified rules:
+1. T+0 bidirectional trading is adopted.
+2. No leverage is used.
+3. Opening and adding to positions are executed with 50% of the current available funds; reducing positions is done with 50% of the current holdings; closing positions are executed in their entirety.
+4. When the model issues a trading signal opposite to the current holding, it is treated as a signal to close the position and immediately open a reverse position.
+5. The simulated execution price and asset valuation price are both simplified to use the current K-line's closing price.
+6. The fee rates are set to 0.5% for opening positions and 0.8% for closing them.
+7. To ensure sufficient historical context, no trades are made in the first 128 steps of each sequence.
+            </div>
+        </div>
+
+        <div class="info-item">
+            About Metrics
+            <div class="info-tooltip">
+1. End-point Returns: Measured based on the number of steps (i.e., K-lines) rather than time span. The calculation length is the maximum context length minus 128. Furthermore, to ensure minimal feature construction, no trades are executed within the initial 128 steps.
+2. Sharpe Ratio: The benchmark risk-free rate is set at 3%.
+3. Max Drawdown: For testing purposes, the simulated trading does not implement stop-loss risk control measures triggered by a maximum drawdown threshold. In real-world scenarios, this threshold should be set appropriately based on individual risk tolerance.
+            </div>
+        </div>
+    </div>
 
     <!-- 控制区域 HTML 结构调整 -->
     <div class="controls">
@@ -506,15 +618,15 @@
                 if (modelResultsContent) {
                     modelResultsContent.innerHTML = `
                         <div class="result-item">
-                            <span class="result-item-label">Returns:</span>
+                            <span class="result-item-label">End-point Returns:</span>
                             <span class="result-item-value"></span>
                         </div>
                         <div class="result-item">
-                            <span class="result-item-label">Sharp:</span>
+                            <span class="result-item-label">Sharp Ratio:</span>
                             <span class="result-item-value"></span>
                         </div>
                         <div class="result-item">
-                            <span class="result-item-label">Max drawdown:</span>
+                            <span class="result-item-label">Max Drawdown:</span>
                             <span class="result-item-value"></span>
                         </div>
                     `;
@@ -608,15 +720,15 @@
                         if (results) {
                             element.innerHTML = `
                                 <div class="result-item">
-                                    <span class="result-item-label">Returns:</span>
+                                    <span class="result-item-label">End-point Returns:</span>
                                     <span class="result-item-value">${(results.final_return_rate * 100).toFixed(2)}%</span>
                                 </div>
                                 <div class="result-item">
-                                    <span class="result-item-label">Sharp:</span>
+                                    <span class="result-item-label">Sharp Ratio:</span>
                                     <span class="result-item-value">${results.sharpe_ratio.toFixed(3)}</span>
                                 </div>
                                 <div class="result-item">
-                                    <span class="result-item-label">Max drawdown:</span>
+                                    <span class="result-item-label">Max Drawdown:</span>
                                     <span class="result-item-value">${(results.max_drawdown * 100).toFixed(2)}%</span>
                                 </div>
                             `;
