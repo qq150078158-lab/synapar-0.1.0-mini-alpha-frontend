@@ -404,7 +404,7 @@
         @media (max-width: 768px) {
             .info-tooltip {
                 position: fixed;
-                top: 50%;
+                /* top: 50%; */
                 left: 50%;
                 transform: translate(-50%, -50%);
                 width: 90vw;
@@ -414,14 +414,11 @@
                 translateY: 0;
             }
 
-            /* * 覆盖 desktop 的 :first-child/:last-child 特殊规则
-             * 确保所有 info-tooltip 在移动设备上都遵循 fixed 居中
-             */
             .info-item:first-child .info-tooltip,
             .info-item:last-child .info-tooltip {
-                left: 50%; /* 确保覆盖 */
+                left: 50%;
                 right: auto;
-                transform: translate(-50%, -50%); /* 确保覆盖 */
+                transform: translate(-50%, -50%); 
             }
         }
 
