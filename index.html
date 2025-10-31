@@ -388,8 +388,8 @@
             cursor: default; /* 浮窗内容为默认光标 */
         }
 
-        /* 当 info-item 悬浮时，显示其子元素 .info-tooltip */
-        .info-item:hover .info-tooltip {
+        /* 当 .show 类存在时，显示 .info-tooltip */
+        .info-tooltip.show {
             display: block;
         }
 
@@ -400,11 +400,20 @@
             transform: translateX(0) translateY(10px);
         }
 
-        /* 最后一个子元素(右侧)的 Tooltip */
-        .info-item:last-child .info-tooltip {
-            left: auto;
-            right: 0;
-            transform: translateX(0) translateY(10px);
+        /* 响应式：针对移动设备优化 tooltip 宽度和位置 */
+        @media (max-width: 768px) {
+            .info-tooltip {
+                width: 90vw; /* 移动设备上使用视口宽度 */
+                left: 50%;
+                transform: translateX(-50%) translateY(10px);
+            }
+            /* 在移动设备上，让所有 tooltip 都居中，覆盖 first/last-child 规则 */
+            .info-item:first-child .info-tooltip,
+            .info-item:last-child .info-tooltip {
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%) translateY(10px);
+            }
         }
 
         /* --- 页脚提示信息样式 --- */
@@ -1134,6 +1143,38 @@ For ease of understanding and comparison, simulated trading follows these simpli
             initializeEmptyCharts();
 
             setEmptyModelResults();
+
+            // --- 信息提示栏的点击交互 ---
+            const infoItems = document.querySelectorAll('.info-item');
+
+            infoItems.forEach(item => {
+                item.addEventListener('click', function(event) {
+                    event.stopPropagation(); // 阻止事件冒泡，防止立即被 document 监听器关闭
+
+                    const currentTooltip = this.querySelector('.info-tooltip');
+                    const isCurrentlyShown = currentTooltip.classList.contains('show');
+
+                    // 1. 先关闭所有其他打开的 tooltips
+                    document.querySelectorAll('.info-tooltip.show').forEach(tt => {
+                        if (tt !== currentTooltip) {
+                            tt.classList.remove('show');
+                        }
+                    });
+
+                    // 2. 切换当前点击的 tooltip
+                    currentTooltip.classList.toggle('show', !isCurrentlyShown);
+                });
+            });
+
+            // --- 点击页面空白处关闭所有 tooltips ---
+            document.addEventListener('click', function(event) {
+                // 检查点击的是否是 info-item 或 tooltip 内部
+                if (!event.target.closest('.info-item')) {
+                    document.querySelectorAll('.info-tooltip.show').forEach(tt => {
+                        tt.classList.remove('show');
+                    });
+                }
+            });
 
             window.addEventListener('resize', () => {
                 modelChart.resize();
