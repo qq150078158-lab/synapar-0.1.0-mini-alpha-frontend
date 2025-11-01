@@ -42,16 +42,6 @@ export default async function handler(request, response) {
             body: JSON.stringify(modifiedBody),
         });
 
-        // 3. 将前端的请求转发到 Hugging Face
-        const hfResponse = await fetch(HF_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${hfToken}`
-            },
-            body: JSON.stringify(request.body),
-        });
-
         // 检查响应头
         const contentType = hfResponse.headers.get("content-type");
 
