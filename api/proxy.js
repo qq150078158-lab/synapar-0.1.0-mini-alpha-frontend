@@ -21,7 +21,26 @@ export default async function handler(request, response) {
     console.log(`[Proxy] 正在转发 POST 请求至: ${HF_API_URL}`);
 
     try {
-        console.log(`[Proxy] 请求体: ${request.body}`);
+        // 1. 获取前端发送的原始请求体
+        const originalBody = request.body;
+
+        // 2. 创建一个新的请求体，强制 source 字段为 'web'
+        const modifiedBody = {
+            ...originalBody,
+            source: 'web' // 确保此代理的调用源始终为 'web'
+        };
+
+        console.log(`[Proxy] 转发 (source: 'web') 请求体`);
+
+        // 3. 将请求转发到 Hugging Face
+        const hfResponse = await fetch(HF_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${hfToken}`
+            },
+            body: JSON.stringify(modifiedBody),
+        });
 
         // 3. 将前端的请求转发到 Hugging Face
         const hfResponse = await fetch(HF_API_URL, {
