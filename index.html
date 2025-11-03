@@ -468,7 +468,7 @@
 6.1 Direction: Includes three distinct instructions — Long, Short, and Hold — along with their respective confidence scores.
 6.2 Quantity: A floating-point value within the [-1, 1] range. A positive value signifies the proportion of available capital to be used for opening or increasing a position. A negative value signifies the proportion of current holdings to be liquidated or reduced.
 6.3 Leverage: A floating-point value within the [0, 1] range, indicating the proportion of the permissible leverage (e.g., within a 1x to 20x range) to apply to the trade. This value is not applicable when closing or reducing a position.
-7. Synapar is a Large Trading Model (LTM). It aims to establish a general-purpose infrastructure for generating a theoretically near-optimal trading instruction for the latest time step, based on a context of a given length — specifically, financial time-series data of a particular frequency. Admittedly, trading rules differ among various financial markets and products, and investors operate under diverse self-imposed constraints. Therefore, the application of LTM-generated trading instructions necessitates flexible adaptation in accordance with the specific context.
+7. Synapar is a Large Decision Model (LDM). It aims to establish a general-purpose infrastructure for generating a theoretically near-optimal trading instruction for the latest time step, based on a context of a given length — specifically, financial time-series data of a particular frequency. Admittedly, trading rules differ among various financial markets and products, and investors operate under diverse self-imposed constraints. Therefore, the application of LDM-generated trading instructions necessitates flexible adaptation in accordance with the specific context.
 8. Future iterations of the model are planned to cover major global financial markets and products, including equities, futures, forex, and cryptocurrencies. The vision is for Synapar to become a general-purpose infrastructure for AI-generated trading instructions, accessible via API services.
             </div>
         </div>
@@ -476,7 +476,7 @@
         <div class="info-item">
             Trading Rules
             <div class="info-tooltip">
-For ease of understanding and comparison, simulated trading follows these simplified rules:
+For ease of understanding and comparison, simulated trading followed these simplified rules:
 1. T+0 bidirectional trading is adopted.
 2. No leverage is used.
 3. Opening and adding to positions are executed with 50% of the current available funds; reducing positions is done with 50% of the current holdings; closing positions are executed in their entirety.
@@ -495,6 +495,40 @@ For ease of understanding and comparison, simulated trading follows these simpli
 3. Max Drawdown: For testing purposes, the simulated trading does not implement stop-loss risk control measures triggered by a maximum drawdown threshold. In real-world scenarios, this threshold should be set appropriately based on individual risk tolerance.
             </div>
         </div>
+
+        <div class="info-item">
+            To Investors
+            <div class="info-tooltip">
+Synapar is currently in the early phase of validating its technical approach and model efficacy. Preliminary studies indicate promising results, which are detailed in our arXiv preprint. The model is also available for validation and testing via our demo page and API. (Please note: The model currently underperforms in high-frequency tests due to the extreme scarcity of available intraday training data.)
+
+Synapar is a Large Decision Model (LDM) utilizing an innovative Hierarchical Temporal-Spatial (HTS) architecture for financial time-series trading decisions.
+
+The LDM, a concept introduced herein, aims to establish a general-purpose infrastructure for generating a theoretically near-optimal trading instruction for the latest time step, based on a context of a given length — specifically, financial time-series data of a particular frequency. Admittedly, trading rules differ among various financial markets and products, and investors operate under diverse self-imposed constraints. Therefore, the application of LDM-generated trading instructions necessitates flexible adaptation in accordance with the specific contexts.
+
+Our research priorities for the next six months are:
+1. To train commercial-grade models for four distinct markets (A-stocks, US-stocks, CN-futures, and Cryptocurrencies) and disseminate the corresponding research findings.
+2. To submit our research to a top-tier conference at the intersection of AI and finance.
+3. To pursue early-stage commercialization of the trained models.
+
+Our planned model sizes are as follows:
+-----------------------------------------------------------------------------------------------------
+Size	        Purpose			                    Description
+-----------------------------------------------------------------------------------------------------
+mini	        Research & Experimentation	    Rapid prototyping, validation, and demonstration
+small       Segmented Markets		    e.g., A-stocks, US-stocks
+base	        Broad Asset Classes		    e.g., Stock market, Futures market
+large	Full Coverage		                    General-purpose LDM
+-----------------------------------------------------------------------------------------------------
+
+We have not previously accepted or actively solicited external investment. We remain, however, open to partnering with like-minded investors who can help accelerate our project's rapid development.
+
+For any inquiries, please contact us at qq150078158@gmail.com.
+            </div>
+        </div>
+
+        <a href="#" target="_blank" class="info-item">
+            Preprint @arXiv
+        </a>
 
         <a href="https://github.com/qq150078158-lab/synapar-0.1.0-mini-alpha-frontend/tree/main/synapar_api_inference.md" target="_blank" class="info-item">
             API
@@ -855,7 +889,7 @@ For ease of understanding and comparison, simulated trading follows these simpli
                     title: {
                         text: title,
                         // --- 添加副标题 ---
-                        subtext: 'forward-adjusted',
+                        subtext: 'Prices are forward-adjusted | Data is T+1 delayed due to a free feed',
                         left: 'center',
                         top: 10, // 为标题增加上边距
                         textStyle: { color: '#e0e0e0', fontWeight: 'normal' },
