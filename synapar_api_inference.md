@@ -8,7 +8,7 @@ This document describes how to call the Synapar (v0.1.0-mini-alpha) model's publ
 
 POST `https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_api_inference`
 
-**Note:** In some countries or regions, it may be necessary to enable a VPN beforehand when accessing the endpoint.
+*(Note: In some countries or regions, it may be necessary to enable a VPN beforehand when accessing the endpoint.)*
 
 ## **Request**
 
@@ -44,13 +44,15 @@ curl \-X POST 'https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_
     \]  
 }'
 
-*(Note: In actual use, the kline\_data array must contain at least kline\_window\_size records to get valid inference results, otherwise an error will be returned.)*
+*(Note: In actual use, the kline\_data array must contain at least kline\_window\_size records to get valid inference results, otherwise an error will be returned. kline\_window\_size must be between [128+16, 1024].)*
 
 ## **Response**
 
 ### **Success Response (200 OK)**
 
 Returns a JSON object containing the model's inference results and simulated trading data based on simplified rules.
+
+*(Note: To ensure sufficient historical context, no trades are made in the first 128 steps of each sequence.)*
 
 {  
     "model\_actions": \[  
