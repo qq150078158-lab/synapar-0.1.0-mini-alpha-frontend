@@ -52,6 +52,12 @@ curl \-X POST 'https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_
 
 Returns a JSON object containing the model's inference results and simulated trading data based on simplified rules.
 
+The model's output comprises three key elements: direction, quantity, and leverage.
+
+* Direction: Includes three distinct instructions — Long, Short, and Hold — along with their respective confidence scores.
+* Quantity: A floating-point value within the [-1, 1] range. A positive value signifies the proportion of available capital to be used for opening or increasing a position. A negative value signifies the proportion of current holdings to be liquidated or reduced.
+* Leverage: A floating-point value within the [0, 1] range, indicating the proportion of the permissible leverage (e.g., within a 1x to 20x range) to apply to the trade. This value is not applicable when closing or reducing a position.
+
 *(Note: To ensure sufficient historical context, no trades are made in the first 128 steps of each sequence.)*
 
 {  
