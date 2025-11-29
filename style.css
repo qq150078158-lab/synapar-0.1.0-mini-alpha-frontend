@@ -1,0 +1,462 @@
+
+/* 页面整体样式 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh; /* 确保 body 至少和视口一样高 */
+    box-sizing: border-box; /* 避免 padding 影响整体布局 */
+}
+
+h1 {
+    color: #ffffff;
+    font-weight: 300;
+}
+
+h3 {
+    color: #b0b0b0;
+    font-weight: 100;
+    font-size: 16px;
+    margin-top: 0;
+}
+
+/* 控制区域样式调整 */
+.controls {
+    background-color: #2c2c2c;
+    padding: 20px 25px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: flex-start; /* 顶部对齐以适应多行 */
+    justify-content: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    width: 95%; /* 保持与图表区宽度一致 */
+    max-width: 1600px;
+    border: 1px solid #3a3a3a;
+    box-sizing: border-box; /* 确保 padding 不会影响总宽度 */
+}
+
+/* 左侧控制区（包含多行输入） */
+.control-section-left {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 左侧控制区内部的行容器 */
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+/* 右侧操作区（生成按钮等） */
+.control-section-right {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex-wrap: wrap;
+    height: 100%;
+    padding-top: 5px;
+    margin-left: auto;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 其他控件样式 */
+.controls label {
+    font-size: 14px;
+    color: #b0b0b0;
+}
+
+/* --- 为 select 和 text input 添加样式 --- */
+.controls select,
+.controls input[type="text"] {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.controls select:focus,
+.controls input[type="text"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.controls input[type="text"] {
+     width: 100px; /* 为股票代码设置一个宽度 */
+}
+
+
+.controls input[type="number"] {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 80px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.controls input[type="number"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* --- 为置信度输入框设置一个较小的宽度 --- */
+#confidence-threshold {
+    width: 60px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: .4s;
+    border-radius: 22px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+.controls button {
+    background-color: #4CAF50;
+    color: #ffffff;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.controls button:hover {
+    background-color: #5cb85c;
+}
+
+.controls button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+/* 图表外层容器样式，实现左右布局 */
+.charts-wrapper {
+    display: flex;
+    gap: 20px; /* 图表之间的间距 */
+    width: 95%;
+    max-width: 1600px;
+    margin-bottom: 20px;
+    flex-grow: 1; /* 让此容器占据所有剩余的垂直空间 */
+    min-height: 550px; /* 设定一个最小高度，防止窗口过小时图表被过度压缩 */
+}
+
+/* * --- 图表容器样式 ---
+ * 移除了 flex: 1，因为现在只有一个图表，让它自然占据空间
+ */
+.chart-container {
+    /* flex: 1;  <-- 移除 */
+    width: 100%; /* <-- 使其占据父容器全部宽度 */
+    min-width: 0; /* 防止 flex item 溢出 */
+    /* 依赖flexbox的默认拉伸行为来填充高度 */
+    background-color: #2c2c2c;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* 加载动画样式 */
+#loader {
+    display: none;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+/* 模拟交易结果区域样式 */
+.simulation-results {
+    display: flex;
+    flex-direction: column; /* 垂直排列 */
+    gap: 8px; /* 项目之间的间距 */
+    padding-left: 15px; /* 左侧增加一些内边距 */
+    border-left: 2px solid #4CAF50; /* 左侧添加一条绿色的分隔线 */
+    align-items: flex-start; /* 左对齐 */
+}
+.result-item {
+    font-size: 13px;
+    color: #e0e0e0;
+}
+.result-item-label {
+    color: #b0b0b0;
+    margin-right: 8px; /* 标签和数值之间的间距 */
+}
+.result-item-value {
+    font-weight: 500;
+    color: #ffffff;
+}
+
+/* --- 日志详情区域样式 --- */
+.log-details-wrapper {
+    display: flex;
+    gap: 20px;
+    width: 95%;
+    max-width: 1600px;
+    margin-top: 25px; /* 与上方图表区域的间距 */
+    margin-bottom: 20px;
+}
+
+/* * --- 日志容器样式 ---
+ * 移除了 flex: 1，使其根据内容或父容器宽度自适应
+ */
+.log-container {
+    /* flex: 1; <-- 移除 */
+    width: 100%; /* <-- 使其占据父容器全部宽度 */
+    background-color: #2c2c2c;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #3a3a3a;
+}
+
+/* --- 拆分日志容器为左右两列 --- */
+.log-column {
+     flex: 1;
+     min-width: 0;
+}
+
+.log-container h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #e0e0e0;
+    font-weight: 300;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+}
+
+.log-section {
+    margin-bottom: 20px;
+}
+
+.log-section:last-child {
+    margin-bottom: 0;
+}
+
+.log-section h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #b0b0b0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.log-content-area {
+    height: 250px; /* 固定高度 */
+    overflow-y: auto; /* 启用垂直滚动条 */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    background-color: #1a1a1a;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
+}
+
+/* 自定义滚动条样式 */
+.log-content-area::-webkit-scrollbar { width: 8px; }
+.log-content-area::-webkit-scrollbar-track { background: #2c2c2c; }
+.log-content-area::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 4px;
+}
+.log-content-area::-webkit-scrollbar-thumb:hover { background: #777; }
+
+.log-entry {
+    padding-bottom: 3px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 3px;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry span { display: inline-block; }
+.log-step { width: 70px; color: #999; }
+.log-action-open { color: #4CAF50; font-weight: bold; }
+.log-action-close { color: #f44336; font-weight: bold; }
+.log-action-add { color: #2196F3; font-weight: bold; }
+.log-action-reduce { color: #ff9800; font-weight: bold; }
+.log-action-hold { color: #9e9e9e; }
+.log-pos-long { color: #4CAF50; }
+.log-pos-short { color: #f44336; }
+.log-pos-hold { color: #9e9e9e; }
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- 信息提示栏样式 --- */
+.info-bar {
+    display: flex;
+    justify-content: center;
+    gap: 25px; /* 各项之间的间距 */
+    margin-top: 5px; /* 在 h3 下方增加一点间距 */
+    margin-bottom: 10px; /* 和下方 controls 区域的间距 */
+    width: 95%;
+    max-width: 1600px;
+    padding: 5px 0; /* 增加一点垂直内边距 */
+}
+
+.info-item {
+    position: relative;
+    font-size: 13px;
+    color: #4CAF50; /* 使用主题绿色，使其醒目 */
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.info-item:hover {
+    color: #5cb85c; /* 悬浮时颜色变亮 */
+}
+
+.info-tooltip {
+    display: none; /* 默认隐藏 */
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 600px; /* 设定一个较大的固定宽度 */
+    max-width: 90vw; /* 防止在小屏幕上溢出 */
+    background-color: #3a3a3a; /* 使用较深的背景 */
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    text-align: left; /* 确保内容左对齐 */
+    font-size: 12px;
+    line-height: 1.7;
+    /* 保留换行和空格，同时允许自动换行 */
+    white-space: pre-wrap;
+    font-family: inherit; /* 继承 info-item 的字体 */
+    font-weight: normal; /* 重置字体粗细 */
+    cursor: default; /* 浮窗内容为默认光标 */
+}
+
+/* 当 .show 类存在时，显示 .info-tooltip */
+.info-tooltip.show {
+    display: block;
+}
+
+/* 调整浮窗位置，避免被遮挡或溢出 */
+/* 第一个子元素(左侧)的 Tooltip */
+.info-item:first-child .info-tooltip {
+    left: 0;
+    transform: translateX(0) translateY(10px);
+}
+
+/* 移动设备优化 tooltip 宽度和位置 */
+@media (max-width: 768px) {
+    .info-tooltip {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90vw;
+        max-width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        translateY: 0;
+    }
+    .info-item:first-child .info-tooltip,
+    .info-item:last-child .info-tooltip {
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+    }
+}
+a.info-item {
+    text-decoration: none;
+}
+
+/* --- 页脚提示信息样式 --- */
+.footer-disclaimer {
+    width: 95%;
+    max-width: 1600px;
+    margin-top: 40px; /* 与上方内容的间距 */
+    margin-bottom: 20px; /* 距离页面底部的间距 */
+    text-align: center;
+    font-size: 12px;
+    color: #888; /* 使用较暗的灰色以示区别 */
+    line-height: 1.6;
+}
+
+.footer-disclaimer p {
+    margin: 5px 0;
+}
+
+.footer-disclaimer .lang-separator {
+    margin: 10px 0;
+    border: 0;
+    border-top: 1px solid #444; /* 细分隔线 */
+    width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+}

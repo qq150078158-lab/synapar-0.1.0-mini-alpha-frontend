@@ -1,0 +1,670 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const API_URL = "/api/proxy";
+
+    // 声明一个全局变量来存储后端返回的完整数据
+    let chartDataStore = null;
+
+    const modelChart = echarts.init(document.getElementById('model-chart'), 'dark');
+
+    const runButton = document.getElementById('run-inference');
+    const loader = document.getElementById('loader');
+
+    // --- 获取股票代码输入框 ---
+    const stockCodeInput = document.getElementById('stock-code-input');
+
+    // --- 获取下拉框元素 ---
+    const versionSelect = document.getElementById('version-select');
+    const marketSelect = document.getElementById('market-select');
+    const frequencySelect = document.getElementById('frequency-select');
+
+    // --- 版本与选项的配置映射 ---
+    const VERSION_CONFIG = {
+        'v0.1.0-mini-alpha': {
+            markets: ['A Stocks'],
+            // 对于 v0.1.0，无论选择哪个 Market (虽然只有一个)，Frequency 都只能是 1day
+            getFrequencies: (market) => ['1day']
+        },
+        'v0.1.1-mini-alpha': {
+            markets: ['A Stocks', 'US Stocks', 'Cryptocurrency'],
+            // 对于 v0.1.1，根据 Market 决定 Frequency 选项
+            getFrequencies: (market) => {
+                if (market === 'Cryptocurrency') {
+                    return ['1day', '4hour'];
+                } else {
+                    // A Stocks 和 US Stocks
+                    return ['1day'];
+                }
+            }
+        }
+    };
+
+    // --- 动态更新下拉框选项的逻辑 ---
+    function updateDropdownOptions() {
+        const currentVersion = versionSelect.value;
+        const config = VERSION_CONFIG[currentVersion];
+
+        // 1. 更新 Market 选项
+        const validMarkets = config.markets;
+        const currentMarketSelection = marketSelect.value;
+
+        marketSelect.innerHTML = ''; // 清空现有选项
+        validMarkets.forEach(market => {
+            const option = document.createElement('option');
+            option.value = market;
+            option.textContent = market;
+            marketSelect.appendChild(option);
+        });
+
+        // 尝试保持之前的选择，如果不再有效则选择第一个默认值
+        if (validMarkets.includes(currentMarketSelection)) {
+            marketSelect.value = currentMarketSelection;
+        } else {
+            marketSelect.value = validMarkets[0];
+        }
+
+        // 2. 更新 Frequency 选项 (基于当前选中的 Market)
+        const currentMarket = marketSelect.value;
+        const validFrequencies = config.getFrequencies(currentMarket);
+        const currentFreqSelection = frequencySelect.value;
+
+        frequencySelect.innerHTML = ''; // 清空现有选项
+        validFrequencies.forEach(freq => {
+            const option = document.createElement('option');
+            option.value = freq;
+            option.textContent = freq;
+            frequencySelect.appendChild(option);
+        });
+
+        // 尝试保持之前的选择，如果不再有效则选择第一个默认值
+        if (validFrequencies.includes(currentFreqSelection)) {
+            frequencySelect.value = currentFreqSelection;
+        } else {
+            frequencySelect.value = validFrequencies[0];
+        }
+    }
+
+    // --- 绑定事件监听器 ---
+    versionSelect.addEventListener('change', updateDropdownOptions);
+    marketSelect.addEventListener('change', updateDropdownOptions);
+
+    // --- 初始化页面时运行一次以设置正确状态 ---
+    updateDropdownOptions();
+
+    // --- 页面加载时，按钮默认为不可用 ---
+    runButton.disabled = true;
+
+    // --- 监听股票代码输入框 ---
+    if (stockCodeInput && runButton) {
+        stockCodeInput.addEventListener('input', () => {
+            // 只有当输入框内容去除前后空格后不为空时，按钮才可用
+            runButton.disabled = stockCodeInput.value.trim() === "";
+        });
+    }
+
+    // 确保 "Model Inference" 区域始终显示标签，以保持顶部控制栏高度
+    function setEmptyModelResults() {
+        const modelResultsContent = document.getElementById('model-results-content');
+        if (modelResultsContent) {
+            modelResultsContent.innerHTML = `
+                <div class="result-item">
+                    <span class="result-item-label">End-point Returns:</span>
+                    <span class="result-item-value"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-item-label">Sharp Ratio:</span>
+                    <span class="result-item-value"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-item-label">Max Drawdown:</span>
+                    <span class="result-item-value"></span>
+                </div>
+            `;
+        }
+    }
+
+    // 定义一个函数，用于在不重新请求后端数据的情况下重绘图表
+    function rerenderCharts() {
+        if (!chartDataStore) return; // 如果没有数据，则不执行任何操作
+
+        const { modelMarkPoints, categories, klineValues, volumeValues, modelAssetCurve } = prepareChartData(chartDataStore);
+
+        renderChart(modelChart, 'Model Inference', categories, klineValues, modelMarkPoints, volumeValues, modelAssetCurve);
+    }
+
+
+    async function fetchAndRender() {
+        loader.style.display = 'block';
+        runButton.disabled = true;
+
+        // 在请求新数据前，先清空图表和数据存储
+        initializeEmptyCharts();
+        chartDataStore = null;
+
+        // --- 清空日志区域 ---
+        document.getElementById('model-trade-log-content').innerHTML = '';
+        document.getElementById('model-account-history-content').innerHTML = '';
+
+        // --- 清空结果区域 ---
+        setEmptyModelResults();
+
+        // --- 获取所有输入控件的值 ---
+        const version = document.getElementById('version-select').value;
+        const market = document.getElementById('market-select').value;
+        const frequency = document.getElementById('frequency-select').value;
+        const stockCode = document.getElementById('stock-code-input').value;
+        const klineWindowSize = document.getElementById('kline-window-size').value;
+        const confidenceThreshold = parseFloat(document.getElementById('confidence-threshold').value);
+
+        // --- 校验代码 ---
+        if (!stockCode || stockCode.trim() === "") {
+            alert("请输入代码 (Code)");
+            loader.style.display = 'none';
+            runButton.disabled = true;
+            return;
+        }
+
+        try {
+            // --- fetch 请求 ---
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // --- 发送所有输入数据 ---
+                body: JSON.stringify({
+                    version: version,
+                    market: market,
+                    frequency: frequency,
+                    stock_code: stockCode,
+                    kline_window_size: parseInt(klineWindowSize, 10),
+                    confidence_threshold: confidenceThreshold
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            // 将获取到的数据存入全局变量
+            chartDataStore = await response.json();
+
+            console.log("成功接收并存储后端数据:", chartDataStore);
+
+            if (!chartDataStore || !chartDataStore.kline_data || chartDataStore.kline_data.length === 0) {
+                alert("未能加载有效的K线数据，请检查股票代码或频率");
+                loader.style.display = 'none';
+                runButton.disabled = false;
+                return;
+            }
+
+            // --- 显示模型策略的模拟交易结果 ---
+            const modelResultsContent = document.getElementById('model-results-content');
+
+            // const optimalSimResults = chartDataStore.optimal_simulation_results;
+            const modelSimResults = chartDataStore.model_simulation_results;
+
+            // 辅助函数，用于填充结果区域
+            function populateResults(element, results) {
+                if (results) {
+                    element.innerHTML = `
+                        <div class="result-item">
+                            <span class="result-item-label">End-point Returns:</span>
+                            <span class="result-item-value">${(results.final_return_rate * 100).toFixed(2)}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-item-label">Sharp Ratio:</span>
+                            <span class="result-item-value">${results.sharpe_ratio.toFixed(3)}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-item-label">Max Drawdown:</span>
+                            <span class="result-item-value">${(results.max_drawdown * 100).toFixed(2)}%</span>
+                        </div>
+                    `;
+                } else {
+                    // 确保此逻辑只针对 model-results-content
+                    if (element.id === 'model-results-content') {
+                        setEmptyModelResults();
+                    } else {
+                        element.innerHTML = '<div class="result-item"><span class="result-item-label">No data</span></div>';
+                    }
+                }
+            }
+
+            // 分别填充最优策略和模型策略的结果
+            // populateResults(optimalResultsContent, optimalSimResults);
+            populateResults(modelResultsContent, modelSimResults);
+
+            const { modelMarkPoints, categories, klineValues, volumeValues, modelAssetCurve } = prepareChartData(chartDataStore);
+
+            // 渲染图表
+            // renderChart(optimalChart, 'Optimal Strategy', categories, klineValues, optimalMarkPoints, volumeValues, optimalAssetCurve);
+            renderChart(modelChart, 'Model Inference', categories, klineValues, modelMarkPoints, volumeValues, modelAssetCurve);
+
+            // --- 渲染详细日志 ---
+            renderTradeLog('model-trade-log-content', chartDataStore.model_trade_log);
+            renderAccountHistory('model-account-history-content', chartDataStore.model_account_history);
+
+        } catch (error) {
+            console.error("获取或渲染数据时出错:", error);
+            alert(`加载数据失败: ${error.message}`);
+        } finally {
+            loader.style.display = 'none';
+            // 请求结束后，按钮的可用状态应重新根据输入框内容判断
+            if (stockCodeInput) {
+                runButton.disabled = stockCodeInput.value.trim() === "";
+            } else {
+                runButton.disabled = false; // 备用方案
+            }
+        }
+    }
+
+    // --- 标记点生成逻辑 ---
+    function prepareChartData(data) {
+        const categories = data.kline_data.map(item => new Date(item.timestamp * 1000).toLocaleString());
+        const klineValues = data.kline_data.map(item => [item.open, item.close, item.low, item.high]);
+
+        // 提取成交量数据
+        const volumeValues = data.kline_data.map(item => item.volume);
+        // 提取资产曲线数据
+        const modelAssetCurve = data.model_asset_curve;
+
+        const longSymbol = 'path://M0,10 L5,0 L10,10 Z'; // 向上箭头
+        const shortSymbol = 'path://M0,0 L5,10 L10,0 Z'; // 向下箭头
+
+        const showHold = document.getElementById('show-hold').checked;
+
+        // 从输入框获取置信度阈值
+        const confidenceThreshold = parseFloat(document.getElementById('confidence-threshold').value) || 0.0;
+
+        // --- hold 标记的自定义 ---
+        const holdSymbol = 'path://M0,0 L8,5 L0,10 Z'; // 1. 自定义右箭头图标
+        let lastPosition = 'below'; // 2. 用于追踪前一个非hold动作标记位置的变量，默认为下方
+
+        const modelMarkPoints = data.model_actions.map((action, i) => {
+            if (i >= data.kline_data.length) return null;
+            const confidence = action.confidence || 0;
+
+            // 根据置信度阈值过滤标记点
+            if ((action.action_type === 'long' || action.action_type === 'short') && confidence < confidenceThreshold) {
+                return null; // 如果置信度低于阈值，则不显示该标记
+            }
+
+            const alpha = 0.3 + 0.7 * confidence;
+
+            if (action.action_type === 'long') {
+                lastPosition = 'below'; // 更新位置状态
+                return { name: 'Long', coord: [i, data.kline_data[i].low], symbol: longSymbol, symbolSize: 8, symbolOffset: [0, 8], itemStyle: { color: `rgba(73, 170, 25, ${alpha})` } };
+            } else if (action.action_type === 'short') {
+                lastPosition = 'above'; // 更新位置状态
+                return { name: 'Short', coord: [i, data.kline_data[i].high], symbol: shortSymbol, symbolSize: 8, symbolOffset: [0, -8], itemStyle: { color: `rgba(255, 77, 79, ${alpha})` } };
+            } else if (action.action_type === 'hold' && showHold) {
+                // 3. 根据 lastPosition 决定 hold 标记的位置
+                const yCoord = lastPosition === 'below' ? data.kline_data[i].low : data.kline_data[i].high;
+                const yOffset = lastPosition === 'below' ? 12 : -12;
+
+                return {
+                    name: 'Hold',
+                    coord: [i, yCoord],
+                    symbol: holdSymbol, // 使用自定义右箭头
+                    symbolSize: 8,
+                    symbolOffset: [0, yOffset],
+                    itemStyle: { color: `rgba(80, 140, 255, ${alpha})` }
+                };
+            }
+            return null;
+        }).filter(Boolean);
+
+        // --- 返回数据 ---
+        return { modelMarkPoints, categories, klineValues, volumeValues, modelAssetCurve };
+    }
+
+    // --- Tooltip 内容 ---
+    function renderChart(chartInstance, title, categories, klineValues, markPointData, volumeValues, assetCurveData) {
+        const option = {
+            title: {
+                text: title,
+                // --- 添加副标题 ---
+                subtext: 'forward-adjusted & T+1 delayed',
+                left: 'center',
+                top: 10, // 为标题增加上边距
+                textStyle: { color: '#e0e0e0', fontWeight: 'normal' },
+                // --- 设置副标题样式 ---
+                subtextStyle: {
+                    color: '#b0b0b0', // 使用稍暗的颜色
+                    fontSize: 12      // 使用较小的字号
+                }
+            },
+            backgroundColor: 'transparent',
+            // 联动 tooltip 和 crosshair
+            axisPointer: {
+                link: [{ xAxisIndex: 'all' }]
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'cross' },
+                // 自定义 tooltip 内容
+                formatter: function (params) {
+                     if (!chartDataStore || !chartDataStore.kline_data.length || !params || params.length === 0) {
+                        return '暂无数据';
+                    }
+
+                    const dataIndex = params[0].dataIndex;
+                    const klineInfo = chartDataStore.kline_data[dataIndex];
+                    // const optimalAction = chartDataStore.optimal_actions[dataIndex];
+                    const modelAction = chartDataStore.model_actions[dataIndex];
+
+                    // 我们需要从图表系列中获取资产数据，以确保即使数据点在视图之外也能正确显示
+                    let assetValue = null;
+                    // 查找名为 'Assets' 的系列的数据
+                    const assetSeries = params.find(p => p.seriesName === 'Assets');
+                    if (assetSeries && assetSeries.value !== undefined) {
+                        assetValue = assetSeries.value;
+                    } else if (assetCurveData && assetCurveData[dataIndex] !== undefined) {
+                        // 备用方案：直接从传入的数组中获取（如果系列不可见或未在params中）
+                        assetValue = assetCurveData[dataIndex];
+                    }
+
+                    const formatVolume = (volume) => {
+                        if (volume >= 1000000) return (volume / 1000000).toFixed(2) + 'M';
+                        if (volume >= 1000) return (volume / 1000).toFixed(2) + 'K';
+                        return volume;
+                    };
+
+                    // 格式化函数
+                    const formatAction = (action) => {
+                        if (!action) return 'N/A';
+                        let type = action.action_type;
+                        if (type === 'long') type = 'Long';
+                        if (type === 'short') type = 'Short';
+                        if (type === 'hold') type = 'Hold';
+                        let details = `${type}`;
+                        if (action.action_type !== 'hold') {
+                            details += `, Q: ${(action.quantity_ratio).toFixed(4)}, L: ${action.leverage_ratio.toFixed(4)}`;
+                        }
+                        if (action.confidence !== undefined) {
+                            details += `, Conf.: ${action.confidence.toFixed(4)}`;
+                        }
+                        return details;
+                    };
+
+                    let tooltipHtml = `<b>${new Date(klineInfo.timestamp * 1000).toLocaleString()}</b><br/>`;
+                    tooltipHtml += `Open: ${klineInfo.open.toFixed(2)} | High: ${klineInfo.high.toFixed(2)} | Low: ${klineInfo.low.toFixed(2)} | Close: ${klineInfo.close.toFixed(2)}<hr style="margin: 5px 0; border-color: #555;">`;
+                    // tooltipHtml += `Volume: ${formatVolume(klineInfo.volume)}<hr style="margin: 5px 0; border-color: #555;">`;
+                    // tooltipHtml += `<b>Optimal Strategy:</b> ${formatAction(optimalAction)}<br/>`;
+                    tooltipHtml += `<b>Model  Inference:</b> ${formatAction(modelAction)}`;
+
+                    // 检查 assetValue 是否有效
+                    if (assetValue !== null && assetValue !== undefined) {
+                        // 确保 assetValue 是一个数字，如果它是从 series.value 获取的
+                        const numericAssetValue = typeof assetValue === 'number' ? assetValue : parseFloat(assetValue);
+                        if (!isNaN(numericAssetValue)) {
+                            tooltipHtml += `<br/><b>Simulate Asset:</b> ${numericAssetValue.toFixed(2)}`;
+                        }
+                    }
+
+                    return tooltipHtml;
+                }
+            },
+            // 使用两个 grid 上下布局 K线图和成交量图
+            grid: [
+                { // K线图 grid
+                    left: '60px',
+                    right: '60px',
+                    top: '60px',
+                    height: '65%'
+                },
+                { // 成交量图 grid
+                    left: '60px',
+                    right: '60px',
+                    bottom: '80px',
+                    height: '12%'
+                }
+            ],
+            xAxis: [
+                { // K线图 x轴
+                    type: 'category',
+                    data: categories,
+                    scale: true,
+                    axisLine: { onZero: false, show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: false }, // 隐藏此处的标签，避免与下方重叠
+                    gridIndex: 0
+                },
+                { // 成交量图 x轴
+                    type: 'category',
+                    data: categories,
+                    scale: true,
+                    gridIndex: 1,
+                    axisLine: { onZero: false, show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: true }, // 在此显示时间标签
+                }
+            ],
+            yAxis: [
+                { // K线图 y轴 (价格)
+                    scale: true,
+                    splitArea: { show: false },
+                    gridIndex: 0
+                },
+                { // 成交量图 y轴
+                    scale: true,
+                    gridIndex: 1,
+                    axisLabel: {
+                        formatter: function (value) {
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+                            return value;
+                        }
+                     },
+                    splitNumber: 2, // 减少刻度线数量
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false }
+                },
+                // 为资产曲线添加右侧Y轴
+                {
+                    type: 'value',
+                    // name: 'Assets',
+                    position: 'right',
+                    scale: true,
+                    gridIndex: 0, // 关键：将此Y轴与K线图的grid关联
+                    axisLabel: {
+                        formatter: function (value) {
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+                            return value.toFixed(0);
+                        }
+                    },
+                    splitLine: { show: false } // 不显示此Y轴的分割线，保持图表简洁
+                }
+            ],
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: [0, 1], // 联动两个 x轴
+                    start: 0,
+                    end: 100
+                },
+                {
+                    show: true,
+                    type: 'slider',
+                    xAxisIndex: [0, 1], // 联动两个 x轴
+                    bottom: '30px',
+                    start: 0,
+                    end: 100,
+                    height: 25
+                }
+            ],
+            series: [{
+                name: 'K线',
+                type: 'candlestick',
+                data: klineValues,
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                itemStyle: {
+                    color: '#49aa19',
+                    color0: '#ff4d4f',
+                    borderColor: '#49aa19',
+                    borderColor0: '#ff4d4f'
+                },
+                markPoint: {
+                    data: markPointData,
+                    label: { show: false }
+                }
+            },
+            // 成交量柱状图系列
+            {
+                name: '成交量',
+                type: 'bar',
+                data: volumeValues,
+                xAxisIndex: 1,
+                yAxisIndex: 1,
+                itemStyle: {
+                    // 根据K线涨跌决定成交量柱的颜色
+                    color: function(params) {
+                        const klineItem = klineValues[params.dataIndex];
+                        // klineItem: [open, close, low, high]
+                        return klineItem[1] >= klineItem[0] ? '#49aa19' : '#ff4d4f';
+                    }
+                }
+            },
+            // 资产曲线的 series 配置
+            {
+                name: 'Assets',
+                type: 'line',
+                data: assetCurveData,
+                smooth: true,
+                showSymbol: false,
+                lineStyle: {
+                    width: 0.3,
+                    color: '#FFFF00',
+                    // type: 'dashed'
+                },
+                xAxisIndex: 0, // 关键：与K线图共享X轴
+                yAxisIndex: 2  // 关键：关联到新增的右侧Y轴 (索引2)
+            }]
+        };
+        chartInstance.setOption(option, true);
+    }
+
+    // --- 渲染日志的辅助函数 ---
+    function renderTradeLog(elementId, logData) {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+
+        container.innerHTML = ''; // 清空旧日志
+        if (!logData || logData.length === 0) {
+            container.innerHTML = '<div>No trades executed.</div>';
+            return;
+        }
+
+        logData.forEach(entry => {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            const actionClass = `log-action-${entry.type}`;
+
+            logEntry.innerHTML =
+                `<span class="log-step">Step ${entry.step}:</span>` +
+                `<span class="${actionClass}">${entry.type.toUpperCase()} ${entry.direction.toUpperCase()}</span> ` +
+                `| Qty: ${entry.quantity.toFixed(4)} @ ${entry.price.toFixed(4)} ` +
+                `| Fee: ${entry.fee.toFixed(2)}`;
+            container.appendChild(logEntry);
+        });
+    }
+
+    function renderAccountHistory(elementId, historyData) {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+
+        container.innerHTML = ''; // 清空旧历史
+        if (!historyData || historyData.length === 0) {
+            container.innerHTML = '<div>No account history available.</div>';
+            return;
+        }
+
+        historyData.forEach(entry => {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            const posClass = `log-pos-${entry.position_direction}`;
+
+            logEntry.innerHTML =
+                `<span class="log-step">Step ${entry.step}:</span>` +
+                `Assets: ${entry.total_assets.toFixed(2)} | ` +
+                `Equity: ${entry.position_market_value.toFixed(2)} | ` +
+                `Cash: ${entry.available_funds.toFixed(2)} | ` +
+                `Pos: <span class="${posClass}">${entry.position_direction}</span> ` +
+                `(${entry.position_quantity.toFixed(4)})`;
+
+            container.appendChild(logEntry);
+        });
+    }
+
+    // --- 初始化空图表 ---
+    function initializeEmptyCharts() {
+        renderChart(modelChart, 'Model Inference', [], [], [], [], []);
+    }
+
+    if (runButton) {
+        runButton.addEventListener('click', fetchAndRender);
+    } else {
+        console.error("Run button not found!");
+    }
+
+    // 为置信度阈值和“Show Hold”开关添加事件监听器，
+    // 当它们的值改变时，调用 rerenderCharts 函数重绘图表
+    document.getElementById('confidence-threshold').addEventListener('input', rerenderCharts);
+    document.getElementById('show-hold').addEventListener('change', rerenderCharts);
+
+    // 避免首次加载时显示空图表
+    initializeEmptyCharts();
+
+    setEmptyModelResults();
+
+    // --- 信息提示栏的点击交互 ---
+    const infoItems = document.querySelectorAll('.info-item');
+
+    infoItems.forEach(item => {
+        const currentTooltip = item.querySelector('.info-tooltip');
+
+        // 如果这个 .info-item 内部没有 .info-tooltip (比如 Public API 链接)，
+        // 则不为它添加切换弹窗的点击事件
+        if (!currentTooltip) {
+            return;
+        }
+
+        // 只为有 tooltip 的项添加点击事件
+        item.addEventListener('click', function(event) {
+            event.stopPropagation(); // 阻止事件冒泡，防止立即被 document 监听器关闭
+
+            const isCurrentlyShown = currentTooltip.classList.contains('show');
+
+            // 1. 先关闭所有其他打开的 tooltips
+            document.querySelectorAll('.info-tooltip.show').forEach(tt => {
+                if (tt !== currentTooltip) {
+                    tt.classList.remove('show');
+                }
+            });
+
+            // 2. 切换当前点击的 tooltip
+            currentTooltip.classList.toggle('show', !isCurrentlyShown);
+        });
+    });
+
+    // --- 点击页面空白处关闭所有 tooltips ---
+    document.addEventListener('click', function(event) {
+        // 检查点击的是否是 info-item 或 tooltip 内部
+        if (!event.target.closest('.info-item')) {
+            document.querySelectorAll('.info-tooltip.show').forEach(tt => {
+                tt.classList.remove('show');
+            });
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        modelChart.resize();
+    });
+});
