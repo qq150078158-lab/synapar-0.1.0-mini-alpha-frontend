@@ -126,12 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 只有在 v0.1.1 且选择了 Crypto 时才加载代码
         if (version === 'v0.1.1-mini-alpha' && market === 'Crypto') {
-            fetchCryptoSymbols();
-            stockCodeInput.placeholder = "e.g. spot_BTCUSDT";
+            // 已禁用 fetchCryptoSymbols();
+            stockCodeInput.placeholder = "e.g. BTCUSDT";
         } else {
             stockCodeInput.placeholder = "e.g. 600000";
             // 隐藏并清空自动补全
-            closeAllLists();
+            // 已禁用 closeAllLists();
         }
     }
 
@@ -148,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
     stockCodeInput.addEventListener('input', function(e) {
         const val = this.value;
 
+        // 仅保留非空校验逻辑，摘掉根据代码实时筛选的逻辑
+        runButton.disabled = val.trim() === "";
+
+        /* --- 以下逻辑已被摘除 ---
         // 仅当 Market 为 Crypto 时启用
         if (marketSelect.value !== 'Crypto') {
             closeAllLists();
@@ -194,8 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (count >= maxItems) break;
             }
         }
+        --- 摘除结束 --- */
     });
 
+    /* 摘除
     // 聚焦输入框时也触发一次显示（如果已有内容或想显示默认推荐）
     stockCodeInput.addEventListener('focus', function() {
         if (marketSelect.value === 'Crypto' && this.value) {
@@ -208,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener("click", function (e) {
         closeAllLists(e.target);
     });
+    */
 
     // --- 绑定事件监听器 ---
     versionSelect.addEventListener('change', updateDropdownOptions);
@@ -287,6 +294,14 @@ document.addEventListener('DOMContentLoaded', () => {
             loader.style.display = 'none';
             runButton.disabled = true;
             return;
+        }
+
+        // 用户只需输入准确代码 (e.g., "BTCUSDT")，后端返回时强制增加 "spot_" 标志
+        if (market === 'Crypto') {
+            // 如果用户没有输入 spot_ 前缀，强制加上
+            if (stockCode && !stockCode.startsWith('spot_')) {
+                stockCode = 'spot_' + stockCode;
+            }
         }
 
         try {
