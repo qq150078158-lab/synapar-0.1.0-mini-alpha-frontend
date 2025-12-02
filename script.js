@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const version = document.getElementById('version-select').value;
         const market = document.getElementById('market-select').value;
         const frequency = document.getElementById('frequency-select').value;
-        const stockCode = document.getElementById('stock-code-input').value;
+        let stockCode = document.getElementById('stock-code-input').value;
         const klineWindowSize = document.getElementById('kline-window-size').value;
         const confidenceThreshold = parseFloat(document.getElementById('confidence-threshold').value);
 
