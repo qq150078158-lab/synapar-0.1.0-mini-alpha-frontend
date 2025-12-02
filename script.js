@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 获取股票代码输入框 ---
     const stockCodeInput = document.getElementById('stock-code-input');
 
+    // 获取自动补全列表的 DOM 元素
+    const autocompleteList = document.getElementById('autocomplete-list');
+
     // --- 获取下拉框元素 ---
     const versionSelect = document.getElementById('version-select');
     const marketSelect = document.getElementById('market-select');
@@ -134,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 自动补全逻辑 ---
     function closeAllLists(elmnt) {
+        if (!autocompleteList) return;
+
         if (elmnt !== stockCodeInput) {
             autocompleteList.innerHTML = '';
             autocompleteList.style.display = 'none';
