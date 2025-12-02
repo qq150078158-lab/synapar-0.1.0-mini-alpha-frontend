@@ -128,6 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (version === 'v0.1.1-mini-alpha' && market === 'Crypto') {
             // 已禁用 fetchCryptoSymbols();
             stockCodeInput.placeholder = "e.g. BTCUSDT";
+        } else if (market === 'US Stocks') {
+            // 美股市场
+            stockCodeInput.placeholder = "e.g. AAPL";
+            // 已禁用 closeAllLists();
         } else {
             stockCodeInput.placeholder = "e.g. 600000";
             // 隐藏并清空自动补全
