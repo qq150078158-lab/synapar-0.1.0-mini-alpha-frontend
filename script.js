@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 声明一个全局变量来存储后端返回的完整数据
     let chartDataStore = null;
+    let cryptoSymbols = []; // 存储所有加密货币代码
 
     const modelChart = echarts.init(document.getElementById('model-chart'), 'dark');
 
@@ -25,10 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
             getFrequencies: (market) => ['1day']
         },
         'v0.1.1-mini-alpha': {
-            markets: ['A Stocks', 'US Stocks', 'Cryptocurrency'],
+            markets: ['A Stocks', 'US Stocks', 'Crypto'],
             // 对于 v0.1.1，根据 Market 决定 Frequency 选项
             getFrequencies: (market) => {
-                if (market === 'Cryptocurrency') {
+                if (market === 'Crypto') {
                     return ['1day', '4hour'];
                 } else {
                     // A Stocks 和 US Stocks
@@ -81,7 +82,127 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             frequencySelect.value = validFrequencies[0];
         }
+
+        // 触发一次 Market Change 以加载 Symbols
+        handleMarketChange();
     }
+
+    // --- 异步获取加密货币代码 ---
+    async function fetchCryptoSymbols() {
+        if (cryptoSymbols.length > 0) return; // 已加载则不再加载
+
+        try {
+            console.log("Fetching crypto symbols...");
+            // 使用 POST 请求发送
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // 添加 action 字段
+                body: JSON.stringify({ action: 'get_symbols' })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.symbols) {
+                    cryptoSymbols = data.symbols;
+                    console.log(`Loaded ${cryptoSymbols.length} crypto symbols.`);
+                } else {
+                    console.warn("Response format error: 'symbols' field missing");
+                }
+            } else {
+                console.error("Failed to fetch symbols:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Error fetching symbols:", error);
+        }
+    }
+
+    function handleMarketChange() {
+        const market = marketSelect.value;
+        const version = versionSelect.value;
+
+        // 只有在 v0.1.1 且选择了 Crypto 时才加载代码
+        if (version === 'v0.1.1-mini-alpha' && market === 'Crypto') {
+            fetchCryptoSymbols();
+            stockCodeInput.placeholder = "e.g. spot_BTCUSDT";
+        } else {
+            stockCodeInput.placeholder = "e.g. 600000";
+            // 隐藏并清空自动补全
+            closeAllLists();
+        }
+    }
+
+    // --- 自动补全逻辑 ---
+    function closeAllLists(elmnt) {
+        if (elmnt !== stockCodeInput) {
+            autocompleteList.innerHTML = '';
+            autocompleteList.style.display = 'none';
+        }
+    }
+
+    stockCodeInput.addEventListener('input', function(e) {
+        const val = this.value;
+
+        // 仅当 Market 为 Crypto 时启用
+        if (marketSelect.value !== 'Crypto') {
+            closeAllLists();
+            runButton.disabled = val.trim() === "";
+            return;
+        }
+
+        closeAllLists();
+        if (!val) {
+            runButton.disabled = true;
+            return;
+        }
+
+        runButton.disabled = false; // 有输入即允许点击（需用户确认正确）
+
+        let count = 0;
+        const maxItems = 50; // 限制显示数量，提高性能
+
+        autocompleteList.style.display = 'block';
+
+        const filterVal = val.toUpperCase();
+
+        for (let i = 0; i < cryptoSymbols.length; i++) {
+            if (cryptoSymbols[i].toUpperCase().includes(filterVal)) {
+                // 创建选项 div
+                const item = document.createElement("div");
+                // 高亮匹配部分
+                const matchIndex = cryptoSymbols[i].toUpperCase().indexOf(filterVal);
+                const pre = cryptoSymbols[i].substr(0, matchIndex);
+                const match = cryptoSymbols[i].substr(matchIndex, val.length);
+                const post = cryptoSymbols[i].substr(matchIndex + val.length);
+
+                item.innerHTML = pre + "<strong>" + match + "</strong>" + post;
+                item.innerHTML += `<input type='hidden' value='${cryptoSymbols[i]}'>`;
+
+                item.addEventListener("click", function(e) {
+                    stockCodeInput.value = this.getElementsByTagName("input")[0].value;
+                    closeAllLists();
+                });
+
+                autocompleteList.appendChild(item);
+
+                count++;
+                if (count >= maxItems) break;
+            }
+        }
+    });
+
+    // 聚焦输入框时也触发一次显示（如果已有内容或想显示默认推荐）
+    stockCodeInput.addEventListener('focus', function() {
+        if (marketSelect.value === 'Crypto' && this.value) {
+            // 触发 input 事件以重新筛选显示
+            const event = new Event('input');
+            this.dispatchEvent(event);
+        }
+    });
+
+    document.addEventListener("click", function (e) {
+        closeAllLists(e.target);
+    });
 
     // --- 绑定事件监听器 ---
     versionSelect.addEventListener('change', updateDropdownOptions);
@@ -93,13 +214,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 页面加载时，按钮默认为不可用 ---
     runButton.disabled = true;
 
-    // --- 监听股票代码输入框 ---
-    if (stockCodeInput && runButton) {
-        stockCodeInput.addEventListener('input', () => {
-            // 只有当输入框内容去除前后空格后不为空时，按钮才可用
-            runButton.disabled = stockCodeInput.value.trim() === "";
-        });
-    }
+//    // --- 监听股票代码输入框 ---
+//    if (stockCodeInput && runButton) {
+//        stockCodeInput.addEventListener('input', () => {
+//            // 只有当输入框内容去除前后空格后不为空时，按钮才可用
+//            runButton.disabled = stockCodeInput.value.trim() === "";
+//        });
+//    }
 
     // 确保 "Model Inference" 区域始终显示标签，以保持顶部控制栏高度
     function setEmptyModelResults() {
@@ -192,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("成功接收并存储后端数据:", chartDataStore);
 
             if (!chartDataStore || !chartDataStore.kline_data || chartDataStore.kline_data.length === 0) {
-                alert("未能加载有效的K线数据，请检查股票代码或频率");
+                alert("未能加载有效的K线数据，请检查代码或频率");
                 loader.style.display = 'none';
                 runButton.disabled = false;
                 return;

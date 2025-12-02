@@ -460,3 +460,59 @@ a.info-item {
     margin-left: auto;
     margin-right: auto;
 }
+
+/* Autocomplete Styles */
+.autocomplete-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid #444;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #2b2b2b;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    border-bottom: 1px solid #444;
+    font-size: 13px;
+    text-align: left;
+}
+
+.autocomplete-items div:hover {
+    background-color: #3a3a3a;
+}
+
+.autocomplete-active {
+    background-color: #1e90ff !important;
+    color: #ffffff !important;
+}
+
+/* Scrollbar style for the list */
+.autocomplete-items::-webkit-scrollbar {
+    width: 8px;
+}
+.autocomplete-items::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+.autocomplete-items::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+.autocomplete-items::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

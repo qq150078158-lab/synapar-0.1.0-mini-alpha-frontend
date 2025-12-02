@@ -86,7 +86,7 @@ For any inquiries, please contact us at qq150078158@gmail.com.
         </a>
     </div>
 
-    <!-- 控制区域 HTML 结构调整 -->
+    <!-- 控制区域 -->
     <div class="controls">
         <div class="control-section-left">
             <!-- --- Version --- -->
@@ -107,7 +107,7 @@ For any inquiries, please contact us at qq150078158@gmail.com.
                     <select id="market-select">
                         <option value="A Stocks" selected>A Stocks</option>
                         <option value="US Stocks">US Stocks</option>
-                        <option value="Cryptocurrency">US Stocks</option>
+                        <option value="Crypto">US Stocks</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -117,13 +117,17 @@ For any inquiries, please contact us at qq150078158@gmail.com.
                         <option value="1day" selected>1day</option>
                     </select>
                 </div>
+
                 <div class="control-group">
                     <label for="stock-code-input">Code</label>
-                    <input type="text" id="stock-code-input" placeholder="e.g. 600000">
+                    <div class="autocomplete-container">
+                        <input type="text" id="stock-code-input" placeholder="e.g. 600000" autocomplete="off">
+                        <div id="autocomplete-list" class="autocomplete-items" style="display: none;"></div>
+                    </div>
                 </div>
 
                 <div class="control-group">
-                    <label for="kline-window-size">Max Context Length </label>
+                    <label for="kline-window-size">Max Context Len. </label>
                     <input type="number" id="kline-window-size" value="512" min="256" max="1024" step="8">
                 </div>
 
