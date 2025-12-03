@@ -1,6 +1,6 @@
-# **Synapar Public API Documentation (v0.1.0-mini-alpha)**
+# **Synapar Public API Documentation**
 
-This document describes how to call the Synapar (v0.1.0-mini-alpha) model's public inference API.
+This document describes how to call the Synapar model's public inference API.
 
 **Note:** The API is for testing and research purposes only and does not constitute any investment advice or suggestion. We assume no responsibility for any investment or trading behavior based on AI-generated content. Public and free API calls may fail to be accessed due to technical failures, upgrades, or other reasons, or access may be closed after a notification is issued. If the same IP address accesses the API too frequently, access may be restricted.
 
@@ -22,18 +22,20 @@ POST `https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_api_infer
 
 The request body must be a JSON object containing the following fields:
 
-| Field | Type | Required | Description                                                                                                                                                                                                           |
-| :---- | :---- | :---- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| kline\_data | Array\[Array\[Number\]\] | **Yes** | K-line data with shape (N, 7). N is the number of timesteps, and the 7 columns must strictly follow the order: \[timestamp, open, high, low, close, volume, amount\].                                                 |
-| frequency | String | **Yes** | The frequency identifier for the K-line data. Must be one of the following values: "1min", "5min", "15min", "30min", "1hour", "4hour", "1day", "1week".                                                               |
-| kline\_window\_size | Number | No | (Optional) The maximum context length. The model will use this length to truncate the last N records of kline\_data. **Must be greater than the model's minimum context length (128+16)**. Default: 256\. Max: 1024\. |
-| confidence\_threshold | Number | No | (Optional) Confidence threshold. The simulation will ignore long or short signals with a confidence lower than this value. Range \[0, 1\]. Default: 0.5.                                                              |
+| Field                 | Type                     | Required | Description                                                                                                                                                                                                           |
+|:----------------------|:-------------------------|:---------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| version               | String                   | No       | (Optional) Specify the model version. Optional parameters: "v0.1.0-mini-alpha", "v0.1.1-mini-alpha". Default: "v0.1.0-mini-alpha".                                                                                    |
+| kline\_data           | Array\[Array\[Number\]\] | **Yes**  | K-line data with shape (N, 7). N is the number of timesteps, and the 7 columns must strictly follow the order: \[timestamp, open, high, low, close, volume, amount\].                                                 |
+| frequency             | String                   | **Yes**  | The frequency identifier for the K-line data. Must be one of the following values: "1min", "5min", "15min", "30min", "1hour", "4hour", "1day", "1week". Recommendation: Use a "1day" frequency for stock; use a "1day" or "4hour" frequency for crypto. |
+| kline\_window\_size   | Number                   | No       | (Optional) The maximum context length. The model will use this length to truncate the last N records of kline\_data. **Must be greater than the model's minimum context length (128+16)**. Default: 256\. Max: 1024\. |
+| confidence\_threshold | Number                   | No       | (Optional) Confidence threshold. The simulation will ignore long or short signals with a confidence lower than this value. Range \[0, 1\]. Default: 0.5.                                                              |
 
 ### **Request Example (curl)**
 
 curl \-X POST 'https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_api_inference' \\  
 \-H 'Content-Type: application/json' \\  
 \-d '{  
+    "version": "v0.1.0-mini-alpha", 
     "frequency": "1day",  
     "kline\_window\_size": 256,  
     "confidence\_threshold": 0.5,  
