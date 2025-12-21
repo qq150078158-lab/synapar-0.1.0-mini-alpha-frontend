@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 对于 v0.1.0，无论选择哪个 Market (虽然只有一个)，Frequency 都只能是 1day
             getFrequencies: (market) => ['1day']
         },
-        'v0.1.1-mini-alpha': {
+        'v0.2.0-small-alpha': {
             markets: ['A Stocks', 'US Stocks', 'Crypto'],
-            // 对于 v0.1.1，根据 Market 决定 Frequency 选项
+            // 对于 v0.2.0，根据 Market 决定 Frequency 选项
             getFrequencies: (market) => {
                 if (market === 'Crypto') {
                     return ['1day', '4hour'];
@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const market = marketSelect.value;
         const version = versionSelect.value;
 
-        // 只有在 v0.1.1 且选择了 Crypto 时才加载代码
-        if (version === 'v0.1.1-mini-alpha' && market === 'Crypto') {
+        // 只有在 v0.2.0 且选择了 Crypto 时才加载代码
+        if (version === 'v0.2.0-small-alpha' && market === 'Crypto') {
             // 已禁用 fetchCryptoSymbols();
             stockCodeInput.placeholder = "e.g. BTCUSDT";
         } else if (market === 'US Stocks') {
