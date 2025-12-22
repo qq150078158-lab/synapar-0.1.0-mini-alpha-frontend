@@ -291,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let stockCode = document.getElementById('stock-code-input').value;
         const klineWindowSize = document.getElementById('kline-window-size').value;
         const confidenceThreshold = parseFloat(document.getElementById('confidence-threshold').value);
+        const allowShort = document.getElementById('allow-short').checked;
 
         // --- 校验代码 ---
         if (!stockCode || stockCode.trim() === "") {
@@ -322,7 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     frequency: frequency,
                     stock_code: stockCode,
                     kline_window_size: parseInt(klineWindowSize, 10),
-                    confidence_threshold: confidenceThreshold
+                    confidence_threshold: confidenceThreshold,
+                    allow_short: allowShort
                 })
             });
 

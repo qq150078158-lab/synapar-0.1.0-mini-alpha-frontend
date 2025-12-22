@@ -89,20 +89,16 @@ For any inquiries, please contact us at qq150078158@gmail.com.
     <!-- 控制区域 -->
     <div class="controls">
         <div class="control-section-left">
-            <!-- --- Version --- -->
+            <!-- --- Version, Market, Frequency, Code --- -->
             <div class="control-row">
                 <div class="control-group">
-                    <label for="version-select">Version</label>
+                    <label for="version-select">Model Version</label>
                     <select id="version-select">
                         <option value="v0.1.0-mini-alpha" selected>v0.1.0-mini-alpha</option>
                         <option value="v0.2.0-small-alpha">v0.2.0-small-alpha</option>
                     </select>
-                    <label for="version-select">Note: v0.2.0-small-alpha is still only for the A-Stocks; opening up other markets is only for convenient testing.</label>
                 </div>
-            </div>
 
-            <!-- --- Market, Frequency, Code --- -->
-            <div class="control-row">
                 <div class="control-group">
                     <label for="market-select">Market</label>
                     <select id="market-select">
@@ -126,26 +122,37 @@ For any inquiries, please contact us at qq150078158@gmail.com.
                         <div id="autocomplete-list" class="autocomplete-items" style="display: none;"></div>
                     </div>
                 </div>
+            </div>
 
+            <!-- --- others --- -->
+            <div class="control-row">
                 <div class="control-group">
-                    <label for="kline-window-size">Max Context Len. </label>
+                    <label for="kline-window-size">Max Context Length</label>
                     <input type="number" id="kline-window-size" value="512" min="256" max="1024" step="8">
                 </div>
 
-                <!-- 置信度阈值(Confidence Threshold)输入控件 -->
                 <div class="control-group">
-                    <label for="confidence-threshold">Conf. </label>
+                    <label for="confidence-threshold">Confidence</label>
                     <input type="number" id="confidence-threshold" value="0.5" min="0" max="1" step="0.05">
                 </div>
 
                 <div class="control-group">
-                    <label for="show-hold">Show Hold </label>
+                    <label for="show-hold">Display Hold Flag</label>
                     <label class="switch">
                       <input type="checkbox" id="show-hold">
                       <span class="slider"></span>
                     </label>
                 </div>
+
+                <div class="control-group">
+                    <label for="show-hold">Short Selling Allowed</label>
+                    <label class="switch">
+                      <input type="checkbox" id="allow-short">
+                      <span class="slider"></span>
+                    </label>
+                </div>
             </div>
+
         </div>
 
         <!-- --- 模拟交易结果对比区域 --- -->
