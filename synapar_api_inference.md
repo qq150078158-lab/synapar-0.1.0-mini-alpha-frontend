@@ -22,13 +22,13 @@ POST `https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_api_infer
 
 The request body must be a JSON object containing the following fields:
 
-| Field                 | Type                     | Required | Description                                                                                                                                                                                                                                             |
-|:----------------------|:-------------------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| version               | String                   | No       | (Optional) Specify the model version. Optional parameters: "v0.1.0-mini-alpha", "v0.2.0-small-alpha". Default: "v0.1.0-mini-alpha".                                                                                                                     |
-| kline\_data           | Array\[Array\[Number\]\] | **Yes**  | K-line data with shape (N, 7). N is the number of timesteps, and the 7 columns must strictly follow the order: \[timestamp, open, high, low, close, volume, amount\].                                                                                   |
-| frequency             | String                   | **Yes**  | The frequency identifier for the K-line data. Must be one of the following values: "1min", "5min", "15min", "30min", "1hour", "4hour", "1day", "1week". Recommendation: Use a "1day" frequency for stock; use a "1day" or "4hour" frequency for crypto. |
-| kline\_window\_size   | Number                   | No       | (Optional) The maximum context length. The model will use this length to truncate the last N records of kline\_data. **Must be greater than the model's minimum context length (128+16)**. Default: 256\. Max: 1024\.                                   |
-| confidence\_threshold | Number                   | No       | (Optional) Confidence threshold. The simulation will ignore long or short signals with a confidence lower than this value. Range \[0, 1\]. Default: 0.5.                                                                                                |
+| Field                 | Type                                                          | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|:----------------------|:--------------------------------------------------------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| version               | String                                                        | No       | (Optional) Specify the model version. Optional parameters: "v0.1.0-mini-alpha", "v0.2.0-small-alpha". Default: "v0.1.0-mini-alpha".                                                                                                                                                                                                                                                                                                             |
+| kline\_data           | Array\[Array\[Number\]\] or Array\[Array\[Array\[Number\]\]\] | **Yes**  | K-line data with shape (N, 7) or (Batch, N, 7). If the Batch dimension is present, it indicates batch inference is being performed, but it must be ensured that the sequence length N is consistent within the batch, and the batch size is within the range of [1, 16]. N within the range of [256, 1024] is the number of timesteps, and the 7 columns must strictly follow the order: \[timestamp, open, high, low, close, volume, amount\]. |
+| frequency             | String                                                        | **Yes**  | The frequency identifier for the K-line data. Must be one of the following values: "1min", "5min", "15min", "30min", "1hour", "4hour", "1day", "1week". Recommendation: Use a "1day" frequency for stock; use a "1day" or "4hour" frequency for crypto.                                                                                                                                                                                         |
+| kline\_window\_size   | Number                                                        | No       | (Optional) The maximum context length. The model will use this length to truncate the last N records of kline\_data. **Must be greater than the model's minimum context length 256**. Default: 256\. Max: 1024\.                                                                                                                                                                                                                                |
+| confidence\_threshold | Number                                                        | No       | (Optional) Confidence threshold. The simulation will ignore long or short signals with a confidence lower than this value. Range \[0, 1\]. Default: 0.5.                                                                                                                                                                                                                                                                                        |
 
 ### **Request Example (curl)**
 
@@ -46,13 +46,15 @@ curl \-X POST 'https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_
     \]  
 }'
 
-*(Note: In actual use, the kline\_data array must contain at least kline\_window\_size records to get valid inference results, otherwise an error will be returned. kline\_window\_size must be between [128+16, 1024].)*
+*(Note: In actual use, the kline\_data array must contain at least kline\_window\_size records to get valid inference results, otherwise an error will be returned. kline\_window\_size must be between [256, 1024].)*
 
 ## **Response**
 
 ### **Success Response (200 OK)**
 
 Returns a JSON object containing the model's inference results and simulated trading data based on simplified rules.
+
+Note that when performing batch inference, the returned results must be parsed correctly.
 
 The model's output comprises three key elements: direction, quantity, and leverage.
 
