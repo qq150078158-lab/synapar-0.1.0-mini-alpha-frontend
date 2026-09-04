@@ -23,23 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 版本与选项的配置映射 ---
     const VERSION_CONFIG = {
-        'v0.1.0-mini-alpha': {
-            markets: ['A Stocks'],
-            // 对于 v0.1.0，无论选择哪个 Market (虽然只有一个)，Frequency 都只能是 1day
-            getFrequencies: (market) => ['1day']
+        'v0305_small': {
+            markets: ['A Stocks', 'US Stocks', 'HongKong Stocks'],
+            getFrequencies: (market) => ['1week', '1day', '1hour']
         },
-        'v0.2.0-small-alpha': {
-            markets: ['A Stocks', 'US Stocks', 'Crypto'],
-            // 对于 v0.2.0，根据 Market 决定 Frequency 选项
-            getFrequencies: (market) => {
-                if (market === 'Crypto') {
-                    return ['1day', '4hour'];
-                } else {
-                    // A Stocks 和 US Stocks
-                    return ['1day'];
-                }
-            }
-        }
+
     };
 
     // --- 动态更新下拉框选项的逻辑 ---
@@ -124,15 +112,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const market = marketSelect.value;
         const version = versionSelect.value;
 
-        // 只有在 v0.2.0 且选择了 Crypto 时才加载代码
-        if (version === 'v0.2.0-small-alpha' && market === 'Crypto') {
+        // 按市场判断
+        if (market === 'Crypto') {
             // 已禁用 fetchCryptoSymbols();
             stockCodeInput.placeholder = "e.g. BTCUSDT";
         } else if (market === 'US Stocks') {
             // 美股市场
             stockCodeInput.placeholder = "e.g. AAPL";
             // 已禁用 closeAllLists();
+        } else if (market === 'HongKong Stocks') {
+            // 港股市场
+            stockCodeInput.placeholder = "e.g. 0836.HK";
+            // 如需禁用其他操作可在此添加，当前仅设置 placeholder
         } else {
+            // 默认A股
             stockCodeInput.placeholder = "e.g. 600000";
             // 隐藏并清空自动补全
             // 已禁用 closeAllLists();
@@ -155,70 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 仅保留非空校验逻辑，摘掉根据代码实时筛选的逻辑
         runButton.disabled = val.trim() === "";
 
-        /* --- 以下逻辑已被摘除 ---
-        // 仅当 Market 为 Crypto 时启用
-        if (marketSelect.value !== 'Crypto') {
-            closeAllLists();
-            runButton.disabled = val.trim() === "";
-            return;
-        }
-
-        closeAllLists();
-        if (!val) {
-            runButton.disabled = true;
-            return;
-        }
-
-        runButton.disabled = false; // 有输入即允许点击（需用户确认正确）
-
-        let count = 0;
-        const maxItems = 50; // 限制显示数量，提高性能
-
-        autocompleteList.style.display = 'block';
-
-        const filterVal = val.toUpperCase();
-
-        for (let i = 0; i < cryptoSymbols.length; i++) {
-            if (cryptoSymbols[i].toUpperCase().includes(filterVal)) {
-                // 创建选项 div
-                const item = document.createElement("div");
-                // 高亮匹配部分
-                const matchIndex = cryptoSymbols[i].toUpperCase().indexOf(filterVal);
-                const pre = cryptoSymbols[i].substr(0, matchIndex);
-                const match = cryptoSymbols[i].substr(matchIndex, val.length);
-                const post = cryptoSymbols[i].substr(matchIndex + val.length);
-
-                item.innerHTML = pre + "<strong>" + match + "</strong>" + post;
-                item.innerHTML += `<input type='hidden' value='${cryptoSymbols[i]}'>`;
-
-                item.addEventListener("click", function(e) {
-                    stockCodeInput.value = this.getElementsByTagName("input")[0].value;
-                    closeAllLists();
-                });
-
-                autocompleteList.appendChild(item);
-
-                count++;
-                if (count >= maxItems) break;
-            }
-        }
-        --- 摘除结束 --- */
     });
 
-    /* 摘除
-    // 聚焦输入框时也触发一次显示（如果已有内容或想显示默认推荐）
-    stockCodeInput.addEventListener('focus', function() {
-        if (marketSelect.value === 'Crypto' && this.value) {
-            // 触发 input 事件以重新筛选显示
-            const event = new Event('input');
-            this.dispatchEvent(event);
-        }
-    });
-
-    document.addEventListener("click", function (e) {
-        closeAllLists(e.target);
-    });
-    */
 
     // --- 绑定事件监听器 ---
     versionSelect.addEventListener('change', updateDropdownOptions);
@@ -230,13 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 页面加载时，按钮默认为不可用 ---
     runButton.disabled = true;
 
-//    // --- 监听股票代码输入框 ---
-//    if (stockCodeInput && runButton) {
-//        stockCodeInput.addEventListener('input', () => {
-//            // 只有当输入框内容去除前后空格后不为空时，按钮才可用
-//            runButton.disabled = stockCodeInput.value.trim() === "";
-//        });
-//    }
 
     // 确保 "Model Inference" 区域始终显示标签，以保持顶部控制栏高度
     function setEmptyModelResults() {

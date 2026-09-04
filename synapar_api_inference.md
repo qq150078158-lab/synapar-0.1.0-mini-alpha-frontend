@@ -24,7 +24,7 @@ The request body must be a JSON object containing the following fields:
 
 | Field                 | Type                                                          | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 |:----------------------|:--------------------------------------------------------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| version               | String                                                        | No       | (Optional) Specify the model version. Optional parameters: "v0.1.0-mini-alpha", "v0.2.0-small-alpha". Default: "v0.1.0-mini-alpha".                                                                                                                                                                                                                                                                                                             |
+| version               | String                                                        | No       | (Optional) Specify the model version. Now only: "v0305_small".                                                                                                                                                                                                                                                                                                                                                                                  |
 | kline\_data           | Array\[Array\[Number\]\] or Array\[Array\[Array\[Number\]\]\] | **Yes**  | K-line data with shape (N, 7) or (Batch, N, 7). If the Batch dimension is present, it indicates batch inference is being performed, but it must be ensured that the sequence length N is consistent within the batch, and the batch size is within the range of [1, 16]. N within the range of [256, 1024] is the number of timesteps, and the 7 columns must strictly follow the order: \[timestamp, open, high, low, close, volume, amount\]. |
 | frequency             | String                                                        | **Yes**  | The frequency identifier for the K-line data. Must be one of the following values: "1min", "5min", "15min", "30min", "1hour", "4hour", "1day", "1week". Recommendation: Use a "1day" frequency for stock; use a "1day" or "4hour" frequency for crypto.                                                                                                                                                                                         |
 | kline\_window\_size   | Number                                                        | No       | (Optional) The maximum context length. The model will use this length to truncate the last N records of kline\_data. **Must be greater than the model's minimum context length 256**. Default: 256\. Max: 1024\.                                                                                                                                                                                                                                |
@@ -36,7 +36,7 @@ The request body must be a JSON object containing the following fields:
 curl \-X POST 'https://synapar-0-1-0-mini-alpha-frontend.vercel.app/api/synapar_api_inference' \\  
 \-H 'Content-Type: application/json' \\  
 \-d '{  
-    "version": "v0.1.0-mini-alpha", 
+    "version": "v0305_small", 
     "frequency": "1day",  
     "kline\_window\_size": 256,  
     "confidence\_threshold": 0.5,  
@@ -118,6 +118,7 @@ The model's output comprises three key elements: direction, quantity, and levera
         // ... (N asset values)  
         14500.0  
     \]  
+    "how\_to\_understand\_actions": "..."
 }
 
 ### **Failure Response**
